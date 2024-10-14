@@ -1,0 +1,32 @@
+
+{
+    "name": "maksekeskus/maksekeskus-php",
+    "description": "Maksekeskus PHP SDK",
+    "type": "library",
+    "keywords": [
+        "maksekeskus",
+        "billing",
+        "payments",
+        "api"
+    ],
+    "homepage": "https://makecommerce.net",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Maksekeskus",
+            "email": "support@maksekeskus.ee"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "nategood/httpful": "*",
+        "ext-curl": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Maksekeskus\\": "lib/"
+        }
+    },
+    "minimum-stability": "dev"
+}
