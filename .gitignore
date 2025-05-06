@@ -13,6 +13,9 @@ yarn-error.log
 /.idea
 /.vscode
 
+# Allow .env.local
+!.env.local
+
 # Project exclude paths
 /storage/app/
 /storage/debugbar/
