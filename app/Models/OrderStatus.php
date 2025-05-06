@@ -34,23 +34,28 @@ class OrderStatus extends Model
 
     protected $guarded = ['id'];
 
-    const TTL = 864000000; // 10000 day
+    const TTL = 864000; // 10 days (reduced from unrealistically large value)
 
     public $timestamps = false;
 
     protected $casts = [
         'active' => 'boolean',
+        'name' => 'array',
     ];
 
     public static function list()
     {
         return Cache::remember('order-status-list', self::TTL, function () {
-            return self::orderByDesc('sort')->get();
+            return self::orderBy('sort', 'asc')->get();
         });
     }
 
     public static function listNames() {
-        return self::list()->where('active', '=', 1)->pluck('name', 'name')->toArray();
+        return self::list()->where('active', true)->pluck('name', 'id')->toArray();
     }
 
+    public static function clearCache(): void
+    {
+        Cache::forget('order-status-list');
+    }
 }

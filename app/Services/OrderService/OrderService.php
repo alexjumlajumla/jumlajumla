@@ -252,34 +252,33 @@ class OrderService extends CoreService
 
         $isSubscribe = (int)Settings::where('key', 'by_subscription')->first()?->value;
 
-        $totalPrice = $order->orderDetails->sum('total_price');
+        $subtotalPrice = $order->orderDetails->sum('total_price');
         $discount   = $order->orderDetails->sum('discount');
 
-        $shopTax = max($totalPrice / 100 * $order->shop?->tax, 0);
+        $shopTax = max($subtotalPrice / 100 * $order->shop?->tax, 0);
 
         $deliveryFee = [];
 
         OrderHelper::checkShopDelivery($order->shop, $data, $this->language, $deliveryFee);
 
         $couponPrice = collect();
-        $couponPrice = OrderHelper::checkCoupon($data, $order->shop_id, $totalPrice, $order->rate, $couponPrice, $deliveryFee);
+        $couponPrice = OrderHelper::checkCoupon($data, $order->shop_id, $subtotalPrice, $order->rate, $couponPrice, $deliveryFee);
 
         foreach ($couponPrice as $coupon) {
-            $this->createOrderCoupon($coupon['coupon'], $order, $totalPrice);
+            $this->createOrderCoupon($coupon['coupon'], $order, $subtotalPrice);
         }
 
-        $totalPrice += $shopTax;
+        $subtotalWithTax = $subtotalPrice + $shopTax;
 
         $percent = $order->shop?->percentage;
 
         $commissionFee = 0;
 
         if (!$isSubscribe && $percent > 0) {
-            $commissionFee = max(($totalPrice / 100 * $percent), 0);
+            $commissionFee = max(($subtotalPrice / 100 * $percent), 0);
         }
 
         if ($isSubscribe) {
-
             $orderLimit = $order->shop?->subscription?->subscription?->order_limit;
 
             $shopOrdersCount = DB::table('orders')
@@ -292,7 +291,6 @@ class OrderService extends CoreService
                     'visibility' => 0
                 ]);
             }
-
         }
 
         $serviceFee = (double)Settings::where('key', 'service_fee')->first()?->value ?: 0;
@@ -301,14 +299,10 @@ class OrderService extends CoreService
             ? $serviceFee > 0 ? $serviceFee / $ordersCount : $serviceFee
             : $order->service_fee;
 
-        $totalPrice += $serviceFee;
-
         $couponPriceSum = collect($couponPrice)->sum('price');
-
         $deliveryFeeSum = collect($deliveryFee)->sum('price');
 
-        $totalPrice += $deliveryFeeSum;
-        $totalPrice -= $couponPriceSum;
+        $totalPrice = $subtotalWithTax + $serviceFee + $deliveryFeeSum - $couponPriceSum;
 
         $order->update([
             'total_price'       => $totalPrice,
@@ -322,7 +316,6 @@ class OrderService extends CoreService
         ]);
 
         if (data_get($data, 'payment_id') && !data_get($data, 'trx_status')) {
-
             $data['payment_sys_id'] = data_get($data, 'payment_id');
 
             $result = (new TransactionService)->orderTransaction($order->id, $data);
@@ -330,7 +323,6 @@ class OrderService extends CoreService
             if (!data_get($result, 'status')) {
                 throw new Exception(data_get($result, 'message'));
             }
-
         }
 
         OrderHelper::updateUserOrderStat($order);

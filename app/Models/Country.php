@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\SetCurrency;
+use App\Traits\SetDefaultCountry;
 
 /**
  * App\Models\Country
@@ -41,13 +44,14 @@ use Illuminate\Support\Collection;
  */
 class Country extends Model
 {
-    use Loadable, Regions;
+    use HasFactory, SetCurrency, SetDefaultCountry, Loadable, Regions;
 
-    public $guarded    = ['id'];
+    protected $guarded = ['id'];
     public $timestamps = false;
 
-    public $casts = [
-        'active' => 'bool',
+    protected $casts = [
+        'active' => 'boolean',
+        'default' => 'boolean',
     ];
 
     public function translations(): HasMany
@@ -119,5 +123,50 @@ class Country extends Model
                         ->select('id', 'country_id', 'locale', 'title');
                 });
             });
+    }
+
+    public function regions(): HasMany
+    {
+        return $this->hasMany(Region::class);
+    }
+
+    /**
+     * Format phone for country with phone code
+     * 
+     * @param string|null $phone
+     * @return string|null
+     */
+    public function formatPhone(?string $phone): ?string
+    {
+        if (empty($phone)) {
+            return null;
+        }
+
+        $phoneCode = $this->phone_code ?? '';
+        
+        // Remove non-numeric characters
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        
+        // If phone already starts with the country code, return as is
+        if (!empty($phoneCode) && strpos($phone, $phoneCode) === 0) {
+            return $phone;
+        }
+        
+        // Otherwise, prepend country code
+        return $phoneCode . $phone;
+    }
+
+    /**
+     * Get formatted phone code with plus symbol
+     * 
+     * @return string|null
+     */
+    public function getFormattedPhoneCodeAttribute(): ?string
+    {
+        if (empty($this->phone_code)) {
+            return null;
+        }
+        
+        return '+' . $this->phone_code;
     }
 }

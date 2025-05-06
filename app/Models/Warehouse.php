@@ -8,6 +8,7 @@ use App\Traits\Cities;
 use App\Traits\Countries;
 use App\Traits\Loadable;
 use App\Traits\Regions;
+use App\Traits\SetTranslations;
 use Eloquent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -53,7 +54,7 @@ use Illuminate\Support\Collection;
 
 class Warehouse extends Model
 {
-    use Loadable, Regions, Countries, Cities, Areas;
+    use Loadable, Regions, Countries, Cities, Areas, SetTranslations;
 
     protected $guarded = ['id'];
     protected $casts   = [
@@ -88,12 +89,26 @@ class Warehouse extends Model
         return $query->where('active', true);
     }
 
-    public function scopeFilter($query, array $filter) {
+    /**
+     * Filter the warehouses by various criteria
+     * 
+     * @param Builder $query
+     * @param array $filter
+     * @return void
+     */
+    public function scopeFilter($query, array $filter): void
+    {
         $query
-            ->when(data_get($filter, 'region_id'),  fn($q,  $regionId)  => $q->where('region_id',  $regionId))
-            ->when(data_get($filter, 'country_id'), fn($q,  $countryId) => $q->where('country_id', $countryId))
-            ->when(data_get($filter, 'city_id'),    fn($q,  $cityId)    => $q->where('city_id',    $cityId))
-            ->when(data_get($filter, 'area_id'),    fn($q,  $areaId)    => $q->where('area_id',    $areaId))
-            ->when(isset($filter['active']), fn($q) => $q->where('active', $filter['active']));
+            ->when(isset($filter['region_id']),  fn($q) => $q->where('region_id', data_get($filter, 'region_id')))
+            ->when(isset($filter['country_id']), fn($q) => $q->where('country_id', data_get($filter, 'country_id')))
+            ->when(isset($filter['city_id']),    fn($q) => $q->where('city_id', data_get($filter, 'city_id')))
+            ->when(isset($filter['area_id']),    fn($q) => $q->where('area_id', data_get($filter, 'area_id')))
+            ->when(isset($filter['active']),     fn($q) => $q->where('active', data_get($filter, 'active')))
+            ->when(isset($filter['search']), function ($query) use ($filter) {
+                return $query->whereHas('translations', function($q) use ($filter) {
+                    $q->where('title', 'LIKE', '%' . data_get($filter, 'search') . '%')
+                      ->orWhere('description', 'LIKE', '%' . data_get($filter, 'search') . '%');
+                });
+            });
     }
 }

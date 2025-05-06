@@ -14,6 +14,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
+use Throwable;
 
 class OrderRepository extends CoreRepository
 {
@@ -302,5 +303,142 @@ class OrderRepository extends CoreRepository
         $time = time();
 
         return $pdf->download("invoice-$time.pdf");
+    }
+
+    /**
+     * @param int $orderId
+     * @param string $status
+     * @param int|null $deliverymanId
+     * @param string|null $note
+     * @param int|null $userId
+     * @return array
+     */
+    public function updateStatus(int $orderId, string $status, ?int $deliverymanId = null, ?string $note = null, ?int $userId = null): array
+    {
+        try {
+            /** @var Order $order */
+            $order = $this->model();
+            
+            $order = $order->find($orderId);
+            
+            if (!$order) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_404,
+                    'message' => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
+                ];
+            }
+            
+            if (!in_array($status, Order::STATUSES)) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_253,
+                    'message' => __('errors.' . ResponseError::ERROR_253, locale: $this->language)
+                ];
+            }
+            
+            // Check status transition validity
+            $validTransition = $this->isValidStatusTransition($order->status, $status);
+            if (!$validTransition) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_400,
+                    'message' => __('Order status transition from :from to :to is not allowed', [
+                        'from' => $order->status,
+                        'to' => $status
+                    ], locale: $this->language)
+                ];
+            }
+
+            $data = [
+                'status'  => $status,
+            ];
+
+            if ($deliverymanId) {
+                $data['deliveryman_id'] = $deliverymanId;
+            }
+
+            if ($note) {
+                $noteData = [
+                    'order_id' => $orderId,
+                    'note'     => $note,
+                    'status'   => $status
+                ];
+                
+                if ($userId) {
+                    $noteData['user_id'] = $userId;
+                }
+
+                OrderStatusNote::create($noteData);
+            }
+
+            $order->update($data);
+
+            // Reset cache for order status list
+            OrderStatus::clearCache();
+            
+            return [
+                'status' => true,
+                'code'   => ResponseError::NO_ERROR,
+                'data'   => $order
+            ];
+        } catch (Throwable $e) {
+            $this->error($e);
+            return [
+                'status'  => false,
+                'code'    => ResponseError::ERROR_501,
+                'message' => __('errors.' . ResponseError::ERROR_501, locale: $this->language)
+            ];
+        }
+    }
+
+    /**
+     * Check if status transition is valid
+     * 
+     * @param string $currentStatus
+     * @param string $newStatus
+     * @return bool
+     */
+    private function isValidStatusTransition(string $currentStatus, string $newStatus): bool
+    {
+        // Define valid status transitions
+        $validTransitions = [
+            Order::STATUS_NEW => [
+                Order::STATUS_ACCEPTED, 
+                Order::STATUS_CANCELED
+            ],
+            Order::STATUS_ACCEPTED => [
+                Order::STATUS_READY, 
+                Order::STATUS_CANCELED, 
+                Order::STATUS_PAUSE
+            ],
+            Order::STATUS_READY => [
+                Order::STATUS_ON_A_WAY, 
+                Order::STATUS_CANCELED, 
+                Order::STATUS_PAUSE
+            ],
+            Order::STATUS_ON_A_WAY => [
+                Order::STATUS_DELIVERED, 
+                Order::STATUS_CANCELED, 
+                Order::STATUS_PAUSE
+            ],
+            Order::STATUS_PAUSE => [
+                Order::STATUS_ACCEPTED, 
+                Order::STATUS_READY, 
+                Order::STATUS_ON_A_WAY, 
+                Order::STATUS_CANCELED
+            ],
+            // Once delivered or canceled, no further transitions
+            Order::STATUS_DELIVERED => [],
+            Order::STATUS_CANCELED => [],
+        ];
+
+        // Same status is always valid
+        if ($currentStatus === $newStatus) {
+            return true;
+        }
+
+        // Check if transition is valid
+        return in_array($newStatus, $validTransitions[$currentStatus] ?? []);
     }
 }

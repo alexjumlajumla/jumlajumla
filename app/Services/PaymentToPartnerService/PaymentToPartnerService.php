@@ -148,27 +148,30 @@ class PaymentToPartnerService extends CoreService
      */
     private function addForDeliveryman(Order $order, User $deliveryman, Payment $payment): void
     {
-
+        // Delivery fee is now part of admin's business, no commission deducted
+        // For deliveryman, we pay them directly from admin
+        $deliveryManEarnings = $order->delivery_fee;
+        
         if ($payment->tag === 'wallet') {
-
-            DB::transaction(function () use ($order, $deliveryman) {
+            DB::transaction(function () use ($order, $deliveryman, $deliveryManEarnings) {
+                // Add funds to deliveryman's wallet
                 (new WalletHistoryService)->create([
-                    'type'  	=> $order->delivery_fee ? 'topup' : 'withdraw',
-                    'price' 	=> (double)str_replace('-', '', (string)$order->delivery_fee),
-                    'note'  	=> "For Deliveryman Order payment #$order->id",
+                    'type'  	=> 'topup',
+                    'price' 	=> (double)$deliveryManEarnings,
+                    'note'  	=> "Payment for delivery service #$order->id",
                     'status'	=> WalletHistory::PAID,
                     'user'  	=> $deliveryman,
                 ]);
 
+                // Deduct funds from admin's wallet
                 (new WalletHistoryService)->create([
-                    'type'  	=> $order->delivery_fee ? 'withdraw' : 'topup',
-                    'price' 	=> (double)str_replace('-', '', (string)$order->delivery_fee),
-                    'note'  	=> "Payment for Deliveryman. Order #$order->id",
+                    'type'  	=> 'withdraw',
+                    'price' 	=> (double)$deliveryManEarnings,
+                    'note'  	=> "Payment to deliveryman for Order #$order->id",
                     'status'	=> WalletHistory::PAID,
                     'user'  	=> auth('sanctum')->user(),
                 ]);
             });
-
         }
 
         $deliveryManPartner = PaymentToPartner::create([
@@ -178,7 +181,7 @@ class PaymentToPartnerService extends CoreService
         ]);
 
         $deliveryManPartner->createTransaction([
-            'price'                 => $order->delivery_fee,
+            'price'                 => $deliveryManEarnings,
             'user_id'               => $deliveryman->id,
             'payment_sys_id'        => $payment->id,
             'note'                  => 'Transaction for deliveryman payment to #' . $order->id,
@@ -186,7 +189,6 @@ class PaymentToPartnerService extends CoreService
             'status'                => Transaction::STATUS_PAID,
             'status_description'    => 'Transaction for deliveryman payment to #' . $order->id
         ]);
-
     }
 
     public function setError(?User $model, Order $order, Payment $payment, array &$errors = []) {

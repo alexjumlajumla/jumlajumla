@@ -239,7 +239,7 @@ class Order extends Model
         }
 
         return $this->total_price
-            - ($this->type == self::IN_HOUSE ? $this->delivery_fee : 0)
+            - $this->delivery_fee
             - $this->service_fee
             - $this->commission_fee
             - $this->coupon_price
