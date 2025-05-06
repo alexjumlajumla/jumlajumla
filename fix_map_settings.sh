@@ -8,28 +8,28 @@ echo "Checking Country model setup..."
 # Add Google Maps API key to the settings table
 echo "Adding Google Maps API key to settings..."
 # This command will check if map_api_key exists in settings table and add/update it if needed
-php -r "
+php -r '
 try {
-    # Connect to the remote database - update these values with your actual remote database details
-    \$pdo = new PDO('mysql:host=YOUR_REMOTE_DB_HOST;dbname=jumla_main', 'jumla_main', 'Cf255f@s9');
-    \$stmt = \$pdo->prepare('SELECT * FROM settings WHERE `key` = :key');
-    \$stmt->execute(['key' => 'map_api_key']);
+    // Connect to the remote database
+    $pdo = new PDO("mysql:host=139.84.227.249;dbname=jumla_main", "jumla_main", "Cf255f@s9");
+    $stmt = $pdo->prepare("SELECT * FROM settings WHERE `key` = :key");
+    $stmt->execute(["key" => "map_api_key"]);
     
-    if (!\$stmt->fetch()) {
+    if (!$stmt->fetch()) {
         // Insert the key if it doesn't exist
-        \$insert = \$pdo->prepare('INSERT INTO settings (`key`, `value`) VALUES (:key, :value)');
-        \$insert->execute(['key' => 'map_api_key', 'value' => 'AIzaSyAoMSKMn_LXJ8Q_0-dxDmMj-AEpDAphFE8']);
-        echo \"Google Maps API key added to settings table.\n\";
+        $insert = $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES (:key, :value)");
+        $insert->execute(["key" => "map_api_key", "value" => "AIzaSyAoMSKMn_LXJ8Q_0-dxDmMj-AEpDAphFE8"]);
+        echo "Google Maps API key added to settings table.\n";
     } else {
         // Update the key if it exists
-        \$update = \$pdo->prepare('UPDATE settings SET `value` = :value WHERE `key` = :key');
-        \$update->execute(['key' => 'map_api_key', 'value' => 'AIzaSyAoMSKMn_LXJ8Q_0-dxDmMj-AEpDAphFE8']);
-        echo \"Google Maps API key updated in settings table.\n\";
+        $update = $pdo->prepare("UPDATE settings SET `value` = :value WHERE `key` = :key");
+        $update->execute(["key" => "map_api_key", "value" => "AIzaSyAoMSKMn_LXJ8Q_0-dxDmMj-AEpDAphFE8"]);
+        echo "Google Maps API key updated in settings table.\n";
     }
-} catch (PDOException \$e) {
-    echo \"Database error: \" . \$e->getMessage();
+} catch (PDOException $e) {
+    echo "Database error: " . $e->getMessage();
 }
-"
+'
 
 # Clear application cache
 echo "Clearing application cache..."
@@ -38,36 +38,36 @@ php artisan cache:clear
 php artisan config:cache
 
 # Check if phone_code field is properly added to countries table
-php -r "
+php -r '
 try {
-    # Connect to the remote database - update these values with your actual remote database details
-    \$pdo = new PDO('mysql:host=YOUR_REMOTE_DB_HOST;dbname=jumla_main', 'jumla_main', 'Cf255f@s9');
+    // Connect to the remote database
+    $pdo = new PDO("mysql:host=139.84.227.249;dbname=jumla_main", "jumla_main", "Cf255f@s9");
     
     // Check if phone_code column exists in countries table
-    \$stmt = \$pdo->prepare('SHOW COLUMNS FROM countries LIKE :column');
-    \$stmt->execute(['column' => 'phone_code']);
+    $stmt = $pdo->prepare("SHOW COLUMNS FROM countries LIKE :column");
+    $stmt->execute(["column" => "phone_code"]);
     
-    if (!\$stmt->fetch()) {
-        echo \"Phone code column missing in countries table. Running fix...\n\";
-        \$pdo->exec('ALTER TABLE countries ADD COLUMN phone_code VARCHAR(10) NULL AFTER code');
+    if (!$stmt->fetch()) {
+        echo "Phone code column missing in countries table. Running fix...\n";
+        $pdo->exec("ALTER TABLE countries ADD COLUMN phone_code VARCHAR(10) NULL AFTER code");
     } else {
-        echo \"Phone code column exists in countries table.\n\";
+        echo "Phone code column exists in countries table.\n";
     }
     
     // Check if default column exists in countries table
-    \$stmt = \$pdo->prepare('SHOW COLUMNS FROM countries LIKE :column');
-    \$stmt->execute(['column' => 'default']);
+    $stmt = $pdo->prepare("SHOW COLUMNS FROM countries LIKE :column");
+    $stmt->execute(["column" => "default"]);
     
-    if (!\$stmt->fetch()) {
-        echo \"Default column missing in countries table. Running fix...\n\";
-        \$pdo->exec('ALTER TABLE countries ADD COLUMN `default` BOOLEAN DEFAULT FALSE AFTER active');
+    if (!$stmt->fetch()) {
+        echo "Default column missing in countries table. Running fix...\n";
+        $pdo->exec("ALTER TABLE countries ADD COLUMN `default` BOOLEAN DEFAULT FALSE AFTER active");
     } else {
-        echo \"Default column exists in countries table.\n\";
+        echo "Default column exists in countries table.\n";
     }
-} catch (PDOException \$e) {
-    echo \"Database error: \" . \$e->getMessage();
+} catch (PDOException $e) {
+    echo "Database error: " . $e->getMessage();
 }
-"
+'
 
 echo "Maps functionality should now be working correctly."
 echo "Note: Make sure the Google Maps API key is properly set in the settings table."
