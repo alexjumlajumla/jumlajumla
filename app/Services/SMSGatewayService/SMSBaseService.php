@@ -40,7 +40,12 @@ class SMSBaseService extends CoreService
 
             $result = (new TwilioService)->sendSms($phone, $otp, $smsPayload);
 
+        } else if ($smsPayload?->type === SmsPayload::MOBISHASTRA) {
+
+            $result = (new MobishastraService)->sendOtp($phone, $otp, $smsPayload);
+
         }
+
 
         if (data_get($result, 'status')) {
 
@@ -48,6 +53,7 @@ class SMSBaseService extends CoreService
 
             return [
                 'status' => true,
+                'otp' => data_get($otp, 'otpCode'),
                 'verifyId' => data_get($otp, 'verifyId'),
                 'phone' => Str::mask($phone, '*', -12, 8),
                 'message' => data_get($result, 'message', ''),

@@ -131,7 +131,21 @@ class SmsPayloadService extends CoreService
             }
 
             return ['status' => true];
+        } else if (data_get($data, 'type') === SmsPayload::MOBISHASTRA) {
+
+            $validator = $this->mobishastra($data);
+
+            if ($validator->fails()) {
+                return [
+                    'status'    => false,
+                    'code'      => ResponseError::ERROR_400,
+                    'params'    => $validator->errors()->toArray(),
+                ];
+            }
+
+            return ['status' => true];
         }
+
 
         return [
             'status'    => false,
@@ -172,4 +186,18 @@ class SmsPayloadService extends CoreService
             'payload.twilio_number'     => ['required', 'string'],
         ]);
     }
+
+    /**
+     * @param array $data
+     * @return \Illuminate\Contracts\Validation\Validator|\Illuminate\Validation\Validator
+     */
+    public function mobishastra(array $data): \Illuminate\Contracts\Validation\Validator|\Illuminate\Validation\Validator
+    {
+        return Validator::make($data, [
+            'payload.mobishastra_user' => ['required', 'string'],
+            'payload.mobishastra_password' => ['required', 'string'],
+            'payload.mobishastra_sender_id'     => ['required', 'string'],
+        ]);
+    }
+
 }

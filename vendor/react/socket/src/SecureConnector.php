@@ -15,8 +15,17 @@ final class SecureConnector implements ConnectorInterface
     private $streamEncryption;
     private $context;
 
-    public function __construct(ConnectorInterface $connector, LoopInterface $loop = null, array $context = array())
+    /**
+     * @param ConnectorInterface $connector
+     * @param ?LoopInterface $loop
+     * @param array $context
+     */
+    public function __construct(ConnectorInterface $connector, $loop = null, array $context = array())
     {
+        if ($loop !== null && !$loop instanceof LoopInterface) { // manual type check to support legacy PHP < 7.1
+            throw new \InvalidArgumentException('Argument #2 ($loop) expected null|React\EventLoop\LoopInterface');
+        }
+
         $this->connector = $connector;
         $this->streamEncryption = new StreamEncryption($loop ?: Loop::get(), false);
         $this->context = $context;
@@ -43,7 +52,7 @@ final class SecureConnector implements ConnectorInterface
         $context = $this->context;
         $encryption = $this->streamEncryption;
         $connected = false;
-        /** @var \React\Promise\PromiseInterface $promise */
+        /** @var \React\Promise\PromiseInterface<ConnectionInterface> $promise */
         $promise = $this->connector->connect(
             \str_replace('tls://', '', $uri)
         )->then(function (ConnectionInterface $connection) use ($context, $encryption, $uri, &$promise, &$connected) {

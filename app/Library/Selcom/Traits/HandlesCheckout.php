@@ -36,6 +36,7 @@ trait HandlesCheckout
             array_merge(
                 $this->getMinimalOrderData($data, $orderId),
                 $this->getCardCheckoutExtraData($data),
+                //$this->getShippingExtraData($data),
                 (($data['user_id'] ?? false) ? ['buyer_userid' => $data['user_id']] : []),
                 (($data['buyer_uuid'] ?? false) ? ['gateway_buyer_uuid' => $data['buyer_uuid']] : [])
             )
@@ -56,6 +57,7 @@ trait HandlesCheckout
             array_merge(
                 $this->getMinimalOrderData($data, $orderId),
                 $this->getCardCheckoutExtraData($data),
+                //$this->getShippingExtraData($data),
                 (($data['user_id'] ?? false) ? ['buyer_userid' => $data['user_id']] : []),
                 (($data['buyer_uuid'] ?? false) ? ['gateway_buyer_uuid' => $data['buyer_uuid']] : [])
             )
@@ -131,6 +133,20 @@ trait HandlesCheckout
             'billing.postcode_or_pobox' => $data['postcode'],
             'billing.country' => $data['country_code'] ?? 'TZ',
             'billing.phone' => $data['billing_phone'] ?? $data['phone'],
+        ];
+    }
+
+    private function getShippingExtraData(array $data): array
+    {
+        return [
+            'shipping.firstname' => explode(' ', $data['name'])[0],
+            'shipping.lastname' => explode(' ', $data['name'])[1],
+            'shipping.address_1' => $data['address'],
+            'shipping.city' => $data['city'] ?? 'Dar Es Salaam',
+            'shipping.state_or_region' => $data['state'] ?? 'Dar Es Salaam',
+            'shipping.postcode_or_pobox' => $data['postcode'],
+            'shipping.country' => $data['country_code'] ?? 'TZ',
+            'shipping.phone' => $data['billing_phone'] ?? $data['phone'],
         ];
     }
 

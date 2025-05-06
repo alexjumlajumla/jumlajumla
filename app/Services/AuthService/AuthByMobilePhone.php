@@ -31,8 +31,36 @@ class AuthByMobilePhone extends CoreService
      * @return JsonResponse
      */
     public function authentication(array $array): JsonResponse
-    {
+    { 
+        /** @var User $user */
         $phone = preg_replace('/\D/', '', data_get($array, 'phone'));
+
+        $user = $this->model()
+            
+            ->updateOrCreate([
+                'phone'         => $phone
+            ], [
+                'firstname'     => $phone,
+                'phone'         => $phone,
+                'ip_address'    => request()->ip(),
+        ]);
+
+        if (!$user->hasAnyRole(Role::query()->pluck('name')->toArray())) {
+            $user->syncRoles('user');
+        }
+
+        $sms = (new SMSBaseService)->smsGateway($phone);
+        $user->update(['verify_token' => $sms['otp']]);
+
+        return $this->successResponse('User send otp code', []);
+    }
+
+    public function authenticationn(array $array): JsonResponse
+    {   
+        \Log::info('This is api data', $array);
+        $phone = preg_replace('/\D/', '', data_get($array, 'phone'));
+
+        \Log::info('Phone', [$phone]);
 
         $sms = (new SMSBaseService)->smsGateway($phone);
 

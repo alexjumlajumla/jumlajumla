@@ -38,10 +38,13 @@ class SmsPayload extends Model
 
     const FIREBASE  = 'firebase';
     const TWILIO    = 'twilio';
+    const MOBISHASTRA = 'mobishastra';
 
     const TYPES = [
         self::TWILIO,
-        self::FIREBASE
+        self::FIREBASE,
+        self::MOBISHASTRA
     ];
+
 
 }

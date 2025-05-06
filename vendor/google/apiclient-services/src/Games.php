@@ -23,7 +23,7 @@ use Google\Client;
  * Service definition for Games (v1).
  *
  * <p>
- * The Google Play games service allows developers to enhance games with social
+ * The Google Play Games Service allows developers to enhance games with social
  * leaderboards, achievements, game state, sign-in with Google, and more.</p>
  *
  * <p>
@@ -45,6 +45,7 @@ class Games extends \Google\Service
   const GAMES =
       "https://www.googleapis.com/auth/games";
 
+  public $accesstokens;
   public $achievementDefinitions;
   public $achievements;
   public $applications;
@@ -76,6 +77,46 @@ class Games extends \Google\Service
     $this->version = 'v1';
     $this->serviceName = 'games';
 
+    $this->accesstokens = new Games\Resource\Accesstokens(
+        $this,
+        $this->serviceName,
+        'accesstokens',
+        [
+          'methods' => [
+            'generatePlayGroupingApiToken' => [
+              'path' => 'games/v1/accesstokens/generatePlayGroupingApiToken',
+              'httpMethod' => 'POST',
+              'parameters' => [
+                'packageName' => [
+                  'location' => 'query',
+                  'type' => 'string',
+                ],
+                'persona' => [
+                  'location' => 'query',
+                  'type' => 'string',
+                ],
+              ],
+            ],'generateRecallPlayGroupingApiToken' => [
+              'path' => 'games/v1/accesstokens/generateRecallPlayGroupingApiToken',
+              'httpMethod' => 'POST',
+              'parameters' => [
+                'packageName' => [
+                  'location' => 'query',
+                  'type' => 'string',
+                ],
+                'persona' => [
+                  'location' => 'query',
+                  'type' => 'string',
+                ],
+                'recallSessionId' => [
+                  'location' => 'query',
+                  'type' => 'string',
+                ],
+              ],
+            ],
+          ]
+        ]
+    );
     $this->achievementDefinitions = new Games\Resource\AchievementDefinitions(
         $this,
         $this->serviceName,

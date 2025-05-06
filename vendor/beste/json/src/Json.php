@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Beste;
 
 use JsonException;
+use SplFileInfo;
+use SplFileObject;
+use Throwable;
 use UnexpectedValueException;
 
 final class Json
@@ -15,12 +18,10 @@ final class Json
 
     /**
      * @throws UnexpectedValueException
-     *
-     * @return mixed
      */
-    public static function decode(string $json, ?bool $forceArray = null)
+    public static function decode(string $json, ?bool $forceArray = null): mixed
     {
-        $forceArray = $forceArray ?? false;
+        $forceArray ??= false;
         $flags = $forceArray ? JSON_OBJECT_AS_ARRAY : 0;
 
         try {
@@ -31,27 +32,39 @@ final class Json
     }
 
     /**
-     * @throws UnexpectedValueException
+     * @param non-empty-string $path
      *
-     * @return mixed
+     * @throws UnexpectedValueException
      */
-    public static function decodeFile(string $path, bool $forceArray = null)
+    public static function decodeFile(string $path, ?bool $forceArray = null): mixed
     {
         if (!is_readable($path)) {
-            throw new UnexpectedValueException("The file at '$path' does not exist");
+            throw new UnexpectedValueException("The file at '$path' is not readable");
         }
 
-        return self::decode((string) file_get_contents($path), $forceArray);
+        if (is_dir($path)) {
+            throw new UnexpectedValueException("'$path' points to a directory");
+        }
+
+        $contents = file_get_contents($path);
+
+        if ($contents === false) {
+            throw new UnexpectedValueException("The file at '$path' is not readable");
+        }
+
+        if ($contents === '') {
+            throw new UnexpectedValueException("The file at '$path' is empty");
+        }
+
+        return self::decode($contents, $forceArray);
     }
 
     /**
-     * @param mixed $data
-     *
      * @throws UnexpectedValueException
      */
-    public static function encode($data, ?int $options = null): string
+    public static function encode(mixed $data, ?int $options = null): string
     {
-        $options = $options ?? 0;
+        $options ??= 0;
 
         try {
             return json_encode($data, $options | self::ENCODE_DEFAULT | JSON_THROW_ON_ERROR);
@@ -61,13 +74,11 @@ final class Json
     }
 
     /**
-     * @param mixed $value
-     *
      * @throws UnexpectedValueException
      */
-    public static function pretty($value, ?int $options = null): string
+    public static function pretty(mixed $value, ?int $options = null): string
     {
-        $options = $options ?? 0;
+        $options ??= 0;
 
         return self::encode($value, $options | self::ENCODE_PRETTY);
     }

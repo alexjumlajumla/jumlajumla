@@ -20,9 +20,17 @@ namespace Google\Service\Networkconnectivity;
 class ConsumerPscConfig extends \Google\Model
 {
   /**
+   * @var string
+   */
+  public $consumerInstanceProject;
+  /**
    * @var bool
    */
   public $disableGlobalAccess;
+  /**
+   * @var string
+   */
+  public $ipVersion;
   /**
    * @var string
    */
@@ -31,6 +39,10 @@ class ConsumerPscConfig extends \Google\Model
    * @var string
    */
   public $producerInstanceId;
+  /**
+   * @var string[]
+   */
+  public $producerInstanceMetadata;
   /**
    * @var string
    */
@@ -45,6 +57,20 @@ class ConsumerPscConfig extends \Google\Model
   public $state;
 
   /**
+   * @param string
+   */
+  public function setConsumerInstanceProject($consumerInstanceProject)
+  {
+    $this->consumerInstanceProject = $consumerInstanceProject;
+  }
+  /**
+   * @return string
+   */
+  public function getConsumerInstanceProject()
+  {
+    return $this->consumerInstanceProject;
+  }
+  /**
    * @param bool
    */
   public function setDisableGlobalAccess($disableGlobalAccess)
@@ -57,6 +83,20 @@ class ConsumerPscConfig extends \Google\Model
   public function getDisableGlobalAccess()
   {
     return $this->disableGlobalAccess;
+  }
+  /**
+   * @param string
+   */
+  public function setIpVersion($ipVersion)
+  {
+    $this->ipVersion = $ipVersion;
+  }
+  /**
+   * @return string
+   */
+  public function getIpVersion()
+  {
+    return $this->ipVersion;
   }
   /**
    * @param string
@@ -85,6 +125,20 @@ class ConsumerPscConfig extends \Google\Model
   public function getProducerInstanceId()
   {
     return $this->producerInstanceId;
+  }
+  /**
+   * @param string[]
+   */
+  public function setProducerInstanceMetadata($producerInstanceMetadata)
+  {
+    $this->producerInstanceMetadata = $producerInstanceMetadata;
+  }
+  /**
+   * @return string[]
+   */
+  public function getProducerInstanceMetadata()
+  {
+    return $this->producerInstanceMetadata;
   }
   /**
    * @param string

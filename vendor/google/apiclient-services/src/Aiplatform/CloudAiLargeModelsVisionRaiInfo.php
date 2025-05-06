@@ -20,8 +20,16 @@ namespace Google\Service\Aiplatform;
 class CloudAiLargeModelsVisionRaiInfo extends \Google\Collection
 {
   protected $collection_key = 'scores';
+  /**
+   * @var string[]
+   */
+  public $blockedEntities;
   protected $detectedLabelsType = CloudAiLargeModelsVisionRaiInfoDetectedLabels::class;
   protected $detectedLabelsDataType = 'array';
+  /**
+   * @var string
+   */
+  public $modelName;
   /**
    * @var string[]
    */
@@ -31,6 +39,20 @@ class CloudAiLargeModelsVisionRaiInfo extends \Google\Collection
    */
   public $scores;
 
+  /**
+   * @param string[]
+   */
+  public function setBlockedEntities($blockedEntities)
+  {
+    $this->blockedEntities = $blockedEntities;
+  }
+  /**
+   * @return string[]
+   */
+  public function getBlockedEntities()
+  {
+    return $this->blockedEntities;
+  }
   /**
    * @param CloudAiLargeModelsVisionRaiInfoDetectedLabels[]
    */
@@ -44,6 +66,20 @@ class CloudAiLargeModelsVisionRaiInfo extends \Google\Collection
   public function getDetectedLabels()
   {
     return $this->detectedLabels;
+  }
+  /**
+   * @param string
+   */
+  public function setModelName($modelName)
+  {
+    $this->modelName = $modelName;
+  }
+  /**
+   * @return string
+   */
+  public function getModelName()
+  {
+    return $this->modelName;
   }
   /**
    * @param string[]

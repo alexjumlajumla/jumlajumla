@@ -8,7 +8,6 @@ $baseDir = dirname($vendorDir);
 return array(
     'Httpful' => array($vendorDir . '/nategood/httpful/src'),
     'HTMLPurifier' => array($vendorDir . '/ezyang/htmlpurifier/library'),
-    'Evenement' => array($vendorDir . '/evenement/evenement/src'),
     'Detection' => array($vendorDir . '/mobiledetect/mobiledetectlib/namespaced'),
     'Barryvdh' => array($vendorDir . '/barryvdh/reflection-docblock/src'),
 );

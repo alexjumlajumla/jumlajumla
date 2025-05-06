@@ -30,7 +30,7 @@ class SelcomService extends BaseService
      * @throws Throwable
      */
     public function processTransaction(array $data): Model|PaymentProcess
-    {   \Log::error('Selcom data', $data);
+    {   \Log::info('Selcom data', $data);
         $payment = Payment::where('tag', Payment::TAG_SELCOM)->first();
 
         $paymentPayload = PaymentPayload::where('payment_id', $payment?->id)->first();
@@ -38,9 +38,10 @@ class SelcomService extends BaseService
         $host = request()->getSchemeAndHttpHost();
 
         [$key, $before] = $this->getPayload($data, $payload);
+        \Log::info('Selcom data ss', $before);
         $modelId    = data_get($before, 'model_id');      
 
-        $totalPrice = ceil(data_get($before, 'total_price')) / 100;
+        $totalPrice = data_get($before, 'total_price');  //ceil(data_get($before, 'total_price')) / 100;
 
         $trxRef     = "$modelId-" . time();
 

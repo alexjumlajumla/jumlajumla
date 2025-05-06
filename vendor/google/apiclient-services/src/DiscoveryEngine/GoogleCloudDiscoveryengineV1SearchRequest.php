@@ -51,6 +51,10 @@ class GoogleCloudDiscoveryengineV1SearchRequest extends \Google\Collection
    */
   public $offset;
   /**
+   * @var int
+   */
+  public $oneBoxPageSize;
+  /**
    * @var string
    */
   public $orderBy;
@@ -76,6 +80,14 @@ class GoogleCloudDiscoveryengineV1SearchRequest extends \Google\Collection
    * @var bool
    */
   public $safeSearch;
+  protected $searchAsYouTypeSpecType = GoogleCloudDiscoveryengineV1SearchRequestSearchAsYouTypeSpec::class;
+  protected $searchAsYouTypeSpecDataType = '';
+  /**
+   * @var string
+   */
+  public $session;
+  protected $sessionSpecType = GoogleCloudDiscoveryengineV1SearchRequestSessionSpec::class;
+  protected $sessionSpecDataType = '';
   protected $spellCorrectionSpecType = GoogleCloudDiscoveryengineV1SearchRequestSpellCorrectionSpec::class;
   protected $spellCorrectionSpecDataType = '';
   protected $userInfoType = GoogleCloudDiscoveryengineV1UserInfo::class;
@@ -230,6 +242,20 @@ class GoogleCloudDiscoveryengineV1SearchRequest extends \Google\Collection
     return $this->offset;
   }
   /**
+   * @param int
+   */
+  public function setOneBoxPageSize($oneBoxPageSize)
+  {
+    $this->oneBoxPageSize = $oneBoxPageSize;
+  }
+  /**
+   * @return int
+   */
+  public function getOneBoxPageSize()
+  {
+    return $this->oneBoxPageSize;
+  }
+  /**
    * @param string
    */
   public function setOrderBy($orderBy)
@@ -326,6 +352,48 @@ class GoogleCloudDiscoveryengineV1SearchRequest extends \Google\Collection
   public function getSafeSearch()
   {
     return $this->safeSearch;
+  }
+  /**
+   * @param GoogleCloudDiscoveryengineV1SearchRequestSearchAsYouTypeSpec
+   */
+  public function setSearchAsYouTypeSpec(GoogleCloudDiscoveryengineV1SearchRequestSearchAsYouTypeSpec $searchAsYouTypeSpec)
+  {
+    $this->searchAsYouTypeSpec = $searchAsYouTypeSpec;
+  }
+  /**
+   * @return GoogleCloudDiscoveryengineV1SearchRequestSearchAsYouTypeSpec
+   */
+  public function getSearchAsYouTypeSpec()
+  {
+    return $this->searchAsYouTypeSpec;
+  }
+  /**
+   * @param string
+   */
+  public function setSession($session)
+  {
+    $this->session = $session;
+  }
+  /**
+   * @return string
+   */
+  public function getSession()
+  {
+    return $this->session;
+  }
+  /**
+   * @param GoogleCloudDiscoveryengineV1SearchRequestSessionSpec
+   */
+  public function setSessionSpec(GoogleCloudDiscoveryengineV1SearchRequestSessionSpec $sessionSpec)
+  {
+    $this->sessionSpec = $sessionSpec;
+  }
+  /**
+   * @return GoogleCloudDiscoveryengineV1SearchRequestSessionSpec
+   */
+  public function getSessionSpec()
+  {
+    return $this->sessionSpec;
   }
   /**
    * @param GoogleCloudDiscoveryengineV1SearchRequestSpellCorrectionSpec

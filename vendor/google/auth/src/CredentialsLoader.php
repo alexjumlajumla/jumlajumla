@@ -30,6 +30,7 @@ use UnexpectedValueException;
  * credentials files on the file system.
  */
 abstract class CredentialsLoader implements
+    GetUniverseDomainInterface,
     FetchAuthTokenInterface,
     UpdateMetadataInterface
 {
@@ -84,6 +85,7 @@ abstract class CredentialsLoader implements
             throw new \DomainException(self::unableToReadEnv($cause));
         }
         $jsonKey = file_get_contents($path);
+
         return json_decode((string) $jsonKey, true);
     }
 
@@ -164,15 +166,15 @@ abstract class CredentialsLoader implements
      *
      * @param FetchAuthTokenInterface $fetcher is used to fetch the auth token
      * @param array<mixed> $httpClientOptions (optional) Array of request options to apply.
-     * @param callable $httpHandler (optional) http client to fetch the token.
-     * @param callable $tokenCallback (optional) function to be called when a new token is fetched.
+     * @param callable|null $httpHandler (optional) http client to fetch the token.
+     * @param callable|null $tokenCallback (optional) function to be called when a new token is fetched.
      * @return \GuzzleHttp\Client
      */
     public static function makeHttpClient(
         FetchAuthTokenInterface $fetcher,
         array $httpClientOptions = [],
-        callable $httpHandler = null,
-        callable $tokenCallback = null
+        ?callable $httpHandler = null,
+        ?callable $tokenCallback = null
     ) {
         $middleware = new Middleware\AuthTokenMiddleware(
             $fetcher,
@@ -272,5 +274,16 @@ abstract class CredentialsLoader implements
             );
         }
         return $clientCertSourceJson;
+    }
+
+    /**
+     * Get the universe domain from the credential. Defaults to "googleapis.com"
+     * for all credential types which do not support universe domain.
+     *
+     * @return string
+     */
+    public function getUniverseDomain(): string
+    {
+        return self::DEFAULT_UNIVERSE_DOMAIN;
     }
 }

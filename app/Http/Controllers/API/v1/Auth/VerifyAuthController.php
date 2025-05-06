@@ -1,5 +1,5 @@
+
 <?php
-declare(strict_types=1);
 
 namespace App\Http\Controllers\API\v1\Auth;
 
@@ -9,37 +9,34 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\AfterVerifyRequest;
 use App\Http\Requests\Auth\PhoneVerifyRequest;
 use App\Http\Requests\Auth\ReSendVerifyRequest;
+use App\Http\Requests\Auth\SendOtpRequest;
+use App\Http\Requests\Auth\ConfirmOTPRequest;
 use App\Http\Resources\UserResource;
 use App\Models\Notification;
-use App\Models\NotificationUser;
 use App\Models\PushNotification;
 use App\Models\User;
 use App\Services\AuthService\AuthByMobilePhone;
-use App\Services\UserServices\UserService;
 use App\Services\UserServices\UserWalletService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Kreait\Laravel\Firebase\Facades\Firebase;
 use Throwable;
 
 class VerifyAuthController extends Controller
 {
     use ApiResponse, \App\Traits\Notification;
 
+    public function sendOtp(SendOtpRequest $request): JsonResponse
+    {
+        return (new AuthByMobilePhone)->authentication($request->all());
+    }
+
+    public function verifyOTP(ConfirmOTPRequest $request): JsonResponse
+    {
+        return (new AuthByMobilePhone)->confirmOTP($request->all());
+    }
+
     public function verifyPhone(PhoneVerifyRequest $request): JsonResponse
     {
-        try {
-            if (!config('app.is_demo') && $request->input('type') === 'firebase') {
-                Firebase::auth()->verifyIdToken($request->input('id'));
-            }
-        } catch (Throwable $e) {
-            $this->error($e);
-            return $this->onErrorResponse([
-                'code'    => ResponseError::ERROR_107,
-                'message' => $e->getMessage()
-            ]);
-        }
-
         return (new AuthByMobilePhone)->confirmOPTCode($request->all());
     }
 
@@ -51,48 +48,56 @@ class VerifyAuthController extends Controller
             ->first();
 
         if (!$user) {
-            return $this->onErrorResponse(['code' => ResponseError::ERROR_404]);
+            return $this->onErrorResponse([
+                'code'    => ResponseError::ERROR_404,
+                'message' => __('errors.' . ResponseError::USER_NOT_FOUND, locale: $this->language)
+            ]);
         }
 
         event((new SendEmailVerification($user)));
 
-        return $this->successResponse(__('errors.' . ResponseError::NO_ERROR, locale: $this->language));
+        return $this->successResponse(ResponseError::ERROR_216);
     }
 
     public function verifyEmail(?string $verifyToken): JsonResponse
     {
-        $user = User::where('verify_token', $verifyToken)
+        $user = User::withTrashed()->where('verify_token', $verifyToken)
             ->whereNull('email_verified_at')
             ->first();
 
         if (empty($user)) {
-            return $this->onErrorResponse(['code' => ResponseError::ERROR_404]);
+            return $this->onErrorResponse([
+                'code'    => ResponseError::ERROR_404,
+                'message' => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
+            ]);
         }
 
         try {
             $user->update([
                 'email_verified_at' => now(),
+                'deleted_at'        => null,
             ]);
 
-            $token = $user->createToken('api_token')->plainTextToken;
-
-            return $this->successResponse(__('errors.' . ResponseError::NO_ERROR, locale: $this->language), [
-                'token'         => $token,
-                'access_token'  => $token,
-                'token_type'    => 'Bearer',
-                'email'         => $user->email
+            return $this->successResponse(__('errors.' . ResponseError::SUCCESS, locale: $this->language), [
+                'email' => $user->email
             ]);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            $this->error($e);
             return $this->onErrorResponse(['code' => ResponseError::ERROR_501]);
         }
     }
 
     public function afterVerifyEmail(AfterVerifyRequest $request): JsonResponse
     {
-        $user = User::where('email', $request->input('email'))->first();
+        $user = User::where('email', $request->input('email'))
+//            ->where('verify_token',  $request->input('verify_token'))
+            ->first();
 
         if (empty($user)) {
-            return $this->onErrorResponse(['code' => ResponseError::ERROR_404]);
+            return $this->onErrorResponse([
+                'code'      => ResponseError::ERROR_404,
+                'message'   => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
+            ]);
         }
 
         $user->update([
@@ -100,6 +105,7 @@ class VerifyAuthController extends Controller
             'lastname'  => $request->input('lastname', $user->lastname),
             'referral'  => $request->input('referral', $user->referral),
             'gender'    => $request->input('gender','male'),
+            'phone'  => $request->input('phone', $user->phone),
             'password'  => bcrypt($request->input('password', 'password')),
         ]);
 
@@ -107,29 +113,25 @@ class VerifyAuthController extends Controller
             ->first();
 
         if (!empty($referral) && !empty($referral->firebase_token)) {
-
-            /** @var NotificationUser $notification */
-            $notification = $referral->notifications
-                ?->where('type', Notification::PUSH)
-                ?->first();
-
-            if ($notification?->notification?->active) {
-                $this->sendNotification(
-                    $referral,
-                    is_array($referral->firebase_token) ? $referral->firebase_token : [$referral->firebase_token],
-                    "Congratulations!",
-                    "By your referral registered new user. $user->name_or_email",
-                    [
-                        'id'   => $referral->id,
-                        'type' => PushNotification::NEW_USER_BY_REFERRAL
-                    ],
-                    [$referral->id],
-                );
-            }
-
+            $this->sendNotification(
+                is_array($referral->firebase_token) ? $referral->firebase_token : [$referral->firebase_token],
+                "Congratulations! By your referral registered new user. $user->name_or_email",
+                $referral->id,
+                [
+                    'id'   => $referral->id,
+                    'type' => PushNotification::NEW_USER_BY_REFERRAL
+                ],
+                [$referral->id]
+            );
         }
 
-        (new UserService)->notificationSync($user);
+        $id = Notification::where('type', Notification::PUSH)->select(['id', 'type'])->first()?->id;
+
+        if ($id) {
+            $user->notifications()->sync([$id]);
+        } else {
+            $user->notifications()->forceDelete();
+        }
 
         $user->emailSubscription()->updateOrCreate([
             'user_id' => $user->id
@@ -137,18 +139,16 @@ class VerifyAuthController extends Controller
             'active' => true
         ]);
 
-        if (empty($user->wallet?->uuid)) {
-            $user = (new UserWalletService)->create($user);
-        }
+		if (empty($user->wallet?->uuid)) {
+			$user = (new UserWalletService)->create($user);
+		}
 
         $token = $user->createToken('api_token')->plainTextToken;
 
-        return $this->successResponse(__('errors.' . ResponseError::NO_ERROR, locale: $this->language), [
-            'token'         => $token,
-            'access_token'  => $token,
-            'token_type'    => 'Bearer',
-            'user'          => UserResource::make($user),
-        ]);
+        return $this->successResponse(
+            __('errors.' . ResponseError::USER_SUCCESSFULLY_REGISTERED, locale: $this->language),
+            ['token' => $token, 'user'  => UserResource::make($user)]
+        );
     }
 
 }

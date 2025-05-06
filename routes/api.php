@@ -30,13 +30,16 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
     Route::post('/auth/logout',                         [LoginController::class, 'logout'])
         ->middleware('sessions');
 
-    Route::post('/auth/verify/phone',                   [VerifyAuthController::class, 'verifyPhone'])
-        ->middleware('sessions');
+    Route::post('/auth/verify/phone',                   [VerifyAuthController::class, 'afterVerifyPhone'])
+        ->middleware('sessions'); //verifyPhone
 
     Route::post('/auth/resend-verify',                  [VerifyAuthController::class, 'resendVerify'])
         ->middleware('sessions');
 
     Route::get('/auth/verify/{hash}',                   [VerifyAuthController::class, 'verifyEmail'])
+        ->middleware('sessions');
+
+    Route::get('/auth/phone/verify/{hash}',             [VerifyAuthController::class, 'verifyPhoneNumber'])
         ->middleware('sessions');
 
     Route::post('/auth/after-verify',                   [VerifyAuthController::class, 'afterVerifyEmail'])

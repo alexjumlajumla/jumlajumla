@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne as BaseHasOne;
 
 /**
  * @template TRelatedModel of \Illuminate\Database\Eloquent\Model
- * @extends BaseHasOne<TRelatedModel>
+ * @template TDeclaringModel of \Illuminate\Database\Eloquent\Model
+ *
+ * @extends BaseHasOne<TRelatedModel, TDeclaringModel>
  */
 class HasOne extends BaseHasOne
 {
