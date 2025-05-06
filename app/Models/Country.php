@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\SetCurrency;
-use App\Traits\SetDefaultCountry;
 
 /**
  * App\Models\Country
@@ -44,7 +43,7 @@ use App\Traits\SetDefaultCountry;
  */
 class Country extends Model
 {
-    use HasFactory, SetCurrency, SetDefaultCountry, Loadable, Regions;
+    use HasFactory, SetCurrency, Loadable, Regions;
 
     protected $guarded = ['id'];
     public $timestamps = false;
@@ -53,6 +52,39 @@ class Country extends Model
         'active' => 'boolean',
         'default' => 'boolean',
     ];
+    
+    /**
+     * Boot the model
+     * 
+     * @return void
+     */
+    public static function boot(): void
+    {
+        parent::boot();
+        
+        static::creating(function ($model) {
+            if ($model->default) {
+                self::query()->where('default', 1)->update(['default' => 0]);
+            }
+        });
+
+        static::updating(function ($model) {
+            if ($model->default) {
+                self::query()->where('id', '!=', $model->id)->where('default', 1)->update(['default' => 0]);
+            }
+        });
+    }
+
+    /**
+     * Scope a query to only include default country.
+     *
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeDefault(Builder $query): Builder
+    {
+        return $query->where('default', 1);
+    }
 
     public function translations(): HasMany
     {
