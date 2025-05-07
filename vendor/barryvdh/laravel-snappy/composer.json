@@ -1,7 +1,14 @@
 {
     "name": "barryvdh/laravel-snappy",
     "description": "Snappy PDF/Image for Laravel",
-    "keywords": ["laravel","snappy", "pdf", "image", "wkhtmltopdf", "wkhtmltoimage"],
+    "keywords": [
+        "laravel",
+        "snappy",
+        "pdf",
+        "image",
+        "wkhtmltopdf",
+        "wkhtmltoimage"
+    ],
     "license": "MIT",
     "authors": [
         {
@@ -10,13 +17,13 @@
         }
     ],
     "require": {
-        "php": ">=7.2",
-        "illuminate/support": "^6|^7|^8|^9",
-        "illuminate/filesystem": "^6|^7|^8|^9",
-        "knplabs/knp-snappy": "^1"
+        "php": "^8.1",
+        "illuminate/support": "^9|^10|^11|^12",
+        "illuminate/filesystem": "^9|^10|^11|^12",
+        "knplabs/knp-snappy": "^1.4.4"
     },
     "require-dev": {
-        "orchestra/testbench": "^4|^5|^6|^7"
+        "orchestra/testbench": "^7|^8|^9|^10"
     },
     "autoload": {
         "psr-4": {

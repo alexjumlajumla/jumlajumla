@@ -8,7 +8,7 @@ use Beste\Json;
 use DateInterval;
 use GuzzleHttp\ClientInterface;
 use Kreait\Firebase\Auth\CreateSessionCookie\GuzzleApiClientHandler;
-use Kreait\Firebase\Auth\SignIn\Handler as SignInHandler;
+use Kreait\Firebase\Auth\SignIn\GuzzleHandler;
 use Kreait\Firebase\Exception\Auth\EmailNotFound;
 use Kreait\Firebase\Exception\Auth\ExpiredOobCode;
 use Kreait\Firebase\Exception\Auth\InvalidOobCode;
@@ -18,8 +18,8 @@ use Kreait\Firebase\Exception\AuthApiExceptionConverter;
 use Kreait\Firebase\Exception\AuthException;
 use Kreait\Firebase\Request\CreateUser;
 use Kreait\Firebase\Request\UpdateUser;
+use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ResponseInterface;
-use StellaMaris\Clock\ClockInterface;
 use Stringable;
 use Throwable;
 
@@ -34,29 +34,23 @@ use function time;
  */
 class ApiClient
 {
-    private string $projectId;
-    private ?string $tenantId;
+    private readonly ProjectAwareAuthResourceUrlBuilder|TenantAwareAuthResourceUrlBuilder $awareAuthResourceUrlBuilder;
 
-    /** @var ProjectAwareAuthResourceUrlBuilder|TenantAwareAuthResourceUrlBuilder */
-    private $awareAuthResourceUrlBuilder;
-    private AuthResourceUrlBuilder $authResourceUrlBuilder;
-    private ClientInterface $client;
-    private SignInHandler $signInHandler;
-    private ClockInterface $clock;
-    private AuthApiExceptionConverter $errorHandler;
+    private readonly AuthResourceUrlBuilder $authResourceUrlBuilder;
 
+    private readonly AuthApiExceptionConverter $errorHandler;
+
+    /**
+     * @param non-empty-string $projectId
+     * @param non-empty-string|null $tenantId
+     */
     public function __construct(
-        string $projectId,
-        ?string $tenantId,
-        ClientInterface $client,
-        SignInHandler $signInHandler,
-        ClockInterface $clock
+        private readonly string $projectId,
+        private readonly ?string $tenantId,
+        private readonly ClientInterface $client,
+        private readonly GuzzleHandler $signInHandler,
+        private readonly ClockInterface $clock,
     ) {
-        $this->projectId = $projectId;
-        $this->tenantId = $tenantId;
-        $this->client = $client;
-        $this->signInHandler = $signInHandler;
-        $this->clock = $clock;
         $this->errorHandler = new AuthApiExceptionConverter();
 
         $this->awareAuthResourceUrlBuilder = $tenantId !== null
@@ -73,7 +67,7 @@ class ApiClient
     {
         $url = $this->authResourceUrlBuilder->getUrl('/accounts:signUp');
 
-        return $this->requestApi($url, $request->jsonSerialize());
+        return $this->requestApi($url, Json::decode(Json::encode($request), true));
     }
 
     /**
@@ -83,11 +77,11 @@ class ApiClient
     {
         $url = $this->awareAuthResourceUrlBuilder->getUrl('/accounts:update');
 
-        return $this->requestApi($url, $request->jsonSerialize());
+        return $this->requestApi($url, Json::decode(Json::encode($request), true));
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param array<non-empty-string, mixed> $claims
      *
      * @throws AuthException
      */
@@ -169,11 +163,11 @@ class ApiClient
     }
 
     /**
-     * @param string|array<string> $uids
+     * @param string|list<non-empty-string> $uids
      *
      * @throws AuthException
      */
-    public function getAccountInfo($uids): ResponseInterface
+    public function getAccountInfo(string|array $uids): ResponseInterface
     {
         if (!is_array($uids)) {
             $uids = [$uids];
@@ -191,7 +185,7 @@ class ApiClient
     {
         $url = $this->awareAuthResourceUrlBuilder->getUrl('/accounts:query');
 
-        return $this->requestApi($url, $query->jsonSerialize());
+        return $this->requestApi($url, Json::decode(Json::encode($query), true));
     }
 
     /**
@@ -238,7 +232,7 @@ class ApiClient
     }
 
     /**
-     * @param array<int, Stringable|string> $providers
+     * @param list<Stringable|non-empty-string> $providers
      *
      * @throws AuthException
      */
@@ -253,19 +247,18 @@ class ApiClient
         ]);
     }
 
-    /**
-     * @param int|DateInterval $ttl
-     */
-    public function createSessionCookie(string $idToken, $ttl): string
+    public function createSessionCookie(string $idToken, int|DateInterval $ttl): string
     {
         return (new GuzzleApiClientHandler($this->client, $this->projectId))
-            ->handle(CreateSessionCookie::forIdToken($idToken, $this->tenantId, $ttl, $this->clock));
+            ->handle(CreateSessionCookie::forIdToken($idToken, $this->tenantId, $ttl, $this->clock))
+        ;
     }
 
     public function getEmailActionLink(string $type, string $email, ActionCodeSettings $actionCodeSettings, ?string $locale = null): string
     {
         return (new CreateActionLink\GuzzleApiClientHandler($this->client, $this->projectId))
-            ->handle(CreateActionLink::new($type, $email, $actionCodeSettings, $this->tenantId, $locale));
+            ->handle(CreateActionLink::new($type, $email, $actionCodeSettings, $this->tenantId, $locale))
+        ;
     }
 
     /**
@@ -296,7 +289,7 @@ class ApiClient
     }
 
     /**
-     * @param array<mixed> $data
+     * @param array<string, mixed> $data
      *
      * @throws AuthException
      */

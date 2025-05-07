@@ -24,16 +24,17 @@ use function is_string;
  */
 final class RemoteConfig implements Contract\RemoteConfig
 {
-    private ApiClient $client;
-
-    public function __construct(ApiClient $client)
+    public function __construct(private readonly ApiClient $client)
     {
-        $this->client = $client;
     }
 
-    public function get(): Template
+    public function get(Version|VersionNumber|int|string|null $versionNumber = null): Template
     {
-        return $this->buildTemplateFromResponse($this->client->getTemplate());
+        if ($versionNumber !== null) {
+            $versionNumber = $this->ensureVersionNumber($versionNumber);
+        }
+
+        return $this->buildTemplateFromResponse($this->client->getTemplate($versionNumber));
     }
 
     public function validate($template): void
@@ -45,7 +46,8 @@ final class RemoteConfig implements Contract\RemoteConfig
     {
         $etag = $this->client
             ->publishTemplate($this->ensureTemplate($template))
-            ->getHeader('ETag');
+            ->getHeader('ETag')
+        ;
 
         $etag = array_shift($etag);
 
@@ -60,7 +62,7 @@ final class RemoteConfig implements Contract\RemoteConfig
         return $etag;
     }
 
-    public function getVersion($versionNumber): Version
+    public function getVersion(VersionNumber|int|string $versionNumber): Version
     {
         $versionNumber = $this->ensureVersionNumber($versionNumber);
 
@@ -73,7 +75,7 @@ final class RemoteConfig implements Contract\RemoteConfig
         throw VersionNotFound::withVersionNumber($versionNumber);
     }
 
-    public function rollbackToVersion($versionNumber): Template
+    public function rollbackToVersion(VersionNumber|int|string $versionNumber): Template
     {
         $versionNumber = $this->ensureVersionNumber($versionNumber);
 
@@ -114,11 +116,19 @@ final class RemoteConfig implements Contract\RemoteConfig
     }
 
     /**
-     * @param VersionNumber|int|string $value
+     * @param VersionNumber|positive-int|non-empty-string $value
      */
-    private function ensureVersionNumber($value): VersionNumber
+    private function ensureVersionNumber(Version|VersionNumber|int|string $value): VersionNumber
     {
-        return $value instanceof VersionNumber ? $value : VersionNumber::fromValue($value);
+        if ($value instanceof VersionNumber) {
+            return $value;
+        }
+
+        if ($value instanceof Version) {
+            return $value->versionNumber();
+        }
+
+        return VersionNumber::fromValue($value);
     }
 
     private function buildTemplateFromResponse(ResponseInterface $response): Template

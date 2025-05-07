@@ -18,15 +18,18 @@ use Psr\Cache\CacheItemPoolInterface;
 
 final class SessionCookieVerifier
 {
-    private Handler $handler;
-
+    /**
+     * @var non-empty-string|null
+     */
     private ?string $expectedTenantId = null;
 
-    public function __construct(Handler $handler)
+    public function __construct(private readonly Handler $handler)
     {
-        $this->handler = $handler;
     }
 
+    /**
+     * @param non-empty-string $projectId
+     */
     public static function createWithProjectId(string $projectId): self
     {
         $clock = SystemClock::create();
@@ -38,6 +41,9 @@ final class SessionCookieVerifier
         return new self($handler);
     }
 
+    /**
+     * @param non-empty-string $projectId
+     */
     public static function createWithProjectIdAndCache(string $projectId, CacheItemPoolInterface $cache): self
     {
         $clock = SystemClock::create();
@@ -51,6 +57,9 @@ final class SessionCookieVerifier
         return new self($handler);
     }
 
+    /**
+     * @param non-empty-string $tenantId
+     */
     public function withExpectedTenantId(string $tenantId): self
     {
         $generator = clone $this;
@@ -69,6 +78,8 @@ final class SessionCookieVerifier
     }
 
     /**
+     * @param non-empty-string $sessionCookie
+     *
      * @throws SessionCookieVerificationFailed
      */
     public function verifySessionCookie(string $sessionCookie): Token
@@ -77,6 +88,9 @@ final class SessionCookieVerifier
     }
 
     /**
+     * @param non-empty-string $sessionCookie
+     * @param int<0, max> $leewayInSeconds
+     *
      * @throws InvalidArgumentException on invalid leeway
      * @throws SessionCookieVerificationFailed
      */

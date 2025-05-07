@@ -4,7 +4,9 @@ namespace Laravel\Telescope\Console;
 
 use Illuminate\Console\Command;
 use Laravel\Telescope\Contracts\PrunableRepository;
+use Symfony\Component\Console\Attribute\AsCommand;
 
+#[AsCommand(name: 'telescope:prune')]
 class PruneCommand extends Command
 {
     /**
@@ -12,7 +14,7 @@ class PruneCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'telescope:prune {--hours=24 : The number of hours to retain Telescope data}';
+    protected $signature = 'telescope:prune {--hours=24 : The number of hours to retain Telescope data} {--keep-exceptions : Retain exception data}';
 
     /**
      * The console command description.
@@ -29,6 +31,6 @@ class PruneCommand extends Command
      */
     public function handle(PrunableRepository $repository)
     {
-        $this->info($repository->prune(now()->subHours($this->option('hours'))).' entries pruned.');
+        $this->info($repository->prune(now()->subHours($this->option('hours')), $this->option('keep-exceptions')).' entries pruned.');
     }
 }

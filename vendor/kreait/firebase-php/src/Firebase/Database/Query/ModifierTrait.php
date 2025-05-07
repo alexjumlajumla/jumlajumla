@@ -10,19 +10,16 @@ use Psr\Http\Message\UriInterface;
 use function array_merge;
 
 /**
- * @codeCoverageIgnore
+ * @internal
  */
 trait ModifierTrait
 {
-    public function modifyValue($value)
+    public function modifyValue(mixed $value): mixed
     {
         return $value;
     }
 
-    /**
-     * @param mixed $value
-     */
-    protected function appendQueryParam(UriInterface $uri, string $key, $value): UriInterface
+    protected function appendQueryParam(UriInterface $uri, string $key, mixed $value): UriInterface
     {
         $queryParams = array_merge(Query::parse($uri->getQuery()), [$key => $value]);
 

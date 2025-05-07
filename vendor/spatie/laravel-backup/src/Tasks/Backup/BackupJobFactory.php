@@ -10,7 +10,7 @@ class BackupJobFactory
 {
     public static function createFromArray(array $config): BackupJob
     {
-        return (new BackupJob())
+        return (new BackupJob)
             ->setFileSelection(static::createFileSelection($config['backup']['source']['files']))
             ->setDbDumpers(static::createDbDumpers($config['backup']['source']['databases']))
             ->setBackupDestinations(BackupDestinationFactory::createFromArray($config['backup']));
@@ -26,8 +26,8 @@ class BackupJobFactory
 
     protected static function createDbDumpers(array $dbConnectionNames): Collection
     {
-        return collect($dbConnectionNames)->mapWithKeys(function (string $dbConnectionName) {
-            return [$dbConnectionName => DbDumperFactory::createFromConnection($dbConnectionName)];
-        });
+        return collect($dbConnectionNames)->mapWithKeys(
+            fn (string $dbConnectionName) => [$dbConnectionName => DbDumperFactory::createFromConnection($dbConnectionName)]
+        );
     }
 }

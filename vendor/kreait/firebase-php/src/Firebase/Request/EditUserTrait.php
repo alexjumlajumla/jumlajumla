@@ -16,21 +16,30 @@ use function mb_strtolower;
 use function preg_replace;
 
 /**
- * @codeCoverageIgnore
- *
  * @template T
  */
 trait EditUserTrait
 {
     protected ?string $uid = null;
+
     protected ?string $email = null;
+
     protected ?string $displayName = null;
+
     protected ?bool $emailIsVerified = null;
+
     protected ?string $phoneNumber = null;
+
     protected ?string $photoUrl = null;
+
     protected ?bool $markAsEnabled = null;
+
     protected ?bool $markAsDisabled = null;
+
     protected ?string $clearTextPassword = null;
+
+    /** @var array<string, mixed>|null */
+    protected ?array $multiFactor = null;
 
     /**
      * @param Stringable|mixed $uid
@@ -38,41 +47,32 @@ trait EditUserTrait
     public function withUid($uid): self
     {
         $request = clone $this;
-        $request->uid = (string) (new Uid((string) $uid));
+        $request->uid = Uid::fromString($uid)->value;
 
         return $request;
     }
 
-    /**
-     * @param Stringable|string $email
-     */
-    public function withEmail($email): self
+    public function withEmail(Stringable|string $email): self
     {
         $request = clone $this;
-        $request->email = (string) (new Email((string) $email));
+        $request->email = Email::fromString((string) $email)->value;
 
         return $request;
     }
 
-    /**
-     * @param Stringable|string $email
-     */
-    public function withVerifiedEmail($email): self
+    public function withVerifiedEmail(Stringable|string $email): self
     {
         $request = clone $this;
-        $request->email = (string) (new Email((string) $email));
+        $request->email = Email::fromString((string) $email)->value;
         $request->emailIsVerified = true;
 
         return $request;
     }
 
-    /**
-     * @param Stringable|string $email
-     */
-    public function withUnverifiedEmail($email): self
+    public function withUnverifiedEmail(Stringable|string $email): self
     {
         $request = clone $this;
-        $request->email = (string) (new Email((string) $email));
+        $request->email = Email::fromString((string) $email)->value;
         $request->emailIsVerified = false;
 
         return $request;
@@ -99,13 +99,10 @@ trait EditUserTrait
         return $request;
     }
 
-    /**
-     * @param Stringable|string $url
-     */
-    public function withPhotoUrl($url): self
+    public function withPhotoUrl(Stringable|string $url): self
     {
         $request = clone $this;
-        $request->photoUrl = (string) Url::fromValue((string) $url);
+        $request->photoUrl = Url::fromString($url)->value;
 
         return $request;
     }
@@ -144,13 +141,10 @@ trait EditUserTrait
         return $request;
     }
 
-    /**
-     * @param Stringable|string $clearTextPassword
-     */
-    public function withClearTextPassword($clearTextPassword): self
+    public function withClearTextPassword(Stringable|string $clearTextPassword): self
     {
         $request = clone $this;
-        $request->clearTextPassword = (string) (new ClearTextPassword((string) $clearTextPassword));
+        $request->clearTextPassword = ClearTextPassword::fromString($clearTextPassword)->value;
 
         return $request;
     }
@@ -177,7 +171,8 @@ trait EditUserTrait
             'phoneNumber' => $this->phoneNumber,
             'photoUrl' => $this->photoUrl,
             'password' => $this->clearTextPassword,
-        ], static fn ($value) => $value !== null);
+            'mfa' => $this->multiFactor,
+        ], static fn($value): bool => $value !== null);
     }
 
     public function hasUid(): bool

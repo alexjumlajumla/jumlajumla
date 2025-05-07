@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kreait\Firebase;
 
 use Beste\Json;
+use DateInterval;
 use DateTimeImmutable;
 use Kreait\Firebase\Auth\ActionCodeSettings;
 use Kreait\Firebase\Auth\ActionCodeSettings\ValidatedActionCodeSettings;
@@ -30,21 +31,21 @@ use Kreait\Firebase\Exception\Auth\RevokedIdToken;
 use Kreait\Firebase\Exception\Auth\RevokedSessionCookie;
 use Kreait\Firebase\Exception\Auth\UserNotFound;
 use Kreait\Firebase\Exception\InvalidArgumentException;
-use Kreait\Firebase\JWT\CustomTokenGenerator;
 use Kreait\Firebase\JWT\IdTokenVerifier;
 use Kreait\Firebase\JWT\SessionCookieVerifier;
-use Kreait\Firebase\JWT\Value\Duration;
+use Kreait\Firebase\JWT\Token\Parser;
 use Kreait\Firebase\Request\CreateUser;
 use Kreait\Firebase\Request\UpdateUser;
 use Kreait\Firebase\Util\DT;
 use Kreait\Firebase\Value\ClearTextPassword;
 use Kreait\Firebase\Value\Email;
 use Kreait\Firebase\Value\Uid;
-use Lcobucci\JWT\Configuration;
+use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Token;
 use Lcobucci\JWT\UnencryptedToken;
+use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ResponseInterface;
-use StellaMaris\Clock\ClockInterface;
+use Stringable;
 use Throwable;
 use Traversable;
 
@@ -60,34 +61,21 @@ use function trim;
  */
 final class Auth implements Contract\Auth
 {
-    private ApiClient $client;
+    private readonly Parser $jwtParser;
 
-    /** @var CustomTokenGenerator|CustomTokenViaGoogleCredentials|null */
-    private $tokenGenerator;
-    private IdTokenVerifier $idTokenVerifier;
-    private SessionCookieVerifier $sessionCookieVerifier;
-    private ClockInterface $clock;
-
-    /**
-     * @param CustomTokenGenerator|CustomTokenViaGoogleCredentials|null $tokenGenerator
-     */
     public function __construct(
-        ApiClient $client,
-        $tokenGenerator,
-        IdTokenVerifier $idTokenVerifier,
-        SessionCookieVerifier $sessionCookieVerifier,
-        ClockInterface $clock
+        private readonly ApiClient $client,
+        private readonly ?CustomTokenViaGoogleCredentials $tokenGenerator,
+        private readonly IdTokenVerifier $idTokenVerifier,
+        private readonly SessionCookieVerifier $sessionCookieVerifier,
+        private readonly ClockInterface $clock,
     ) {
-        $this->client = $client;
-        $this->tokenGenerator = $tokenGenerator;
-        $this->idTokenVerifier = $idTokenVerifier;
-        $this->sessionCookieVerifier = $sessionCookieVerifier;
-        $this->clock = $clock;
+        $this->jwtParser = new Parser(new JoseEncoder());
     }
 
-    public function getUser($uid): UserRecord
+    public function getUser(Stringable|string $uid): UserRecord
     {
-        $uid = (string) (new Uid((string) $uid));
+        $uid = Uid::fromString($uid)->value;
 
         $userRecord = $this->getUsers([$uid])[$uid] ?? null;
 
@@ -100,7 +88,7 @@ final class Auth implements Contract\Auth
 
     public function getUsers(array $uids): array
     {
-        $uids = array_map(static fn ($uid) => (string) (new Uid((string) $uid)), $uids);
+        $uids = array_map(static fn($uid): string => Uid::fromString($uid)->value, $uids);
 
         $users = array_fill_keys($uids, null);
 
@@ -116,7 +104,7 @@ final class Auth implements Contract\Auth
         return $users;
     }
 
-    public function queryUsers($query): array
+    public function queryUsers(UserQuery|array $query): array
     {
         $userQuery = $query instanceof UserQuery ? $query : UserQuery::fromArray($query);
 
@@ -159,7 +147,7 @@ final class Auth implements Contract\Auth
         } while ($pageToken);
     }
 
-    public function createUser($properties): UserRecord
+    public function createUser(array|CreateUser $properties): UserRecord
     {
         $request = $properties instanceof CreateUser
             ? $properties
@@ -170,7 +158,7 @@ final class Auth implements Contract\Auth
         return $this->getUserRecordFromResponse($response);
     }
 
-    public function updateUser($uid, $properties): UserRecord
+    public function updateUser(Stringable|string $uid, array|UpdateUser $properties): UserRecord
     {
         $request = $properties instanceof UpdateUser
             ? $properties
@@ -183,7 +171,7 @@ final class Auth implements Contract\Auth
         return $this->getUserRecordFromResponse($response);
     }
 
-    public function createUserWithEmailAndPassword($email, $password): UserRecord
+    public function createUserWithEmailAndPassword(Stringable|string $email, Stringable|string $password): UserRecord
     {
         return $this->createUser(
             CreateUser::new()
@@ -192,9 +180,9 @@ final class Auth implements Contract\Auth
         );
     }
 
-    public function getUserByEmail($email): UserRecord
+    public function getUserByEmail(Stringable|string $email): UserRecord
     {
-        $email = (string) (new Email((string) $email));
+        $email = Email::fromString((string) $email)->value;
 
         $response = $this->client->getUserByEmail($email);
 
@@ -207,7 +195,7 @@ final class Auth implements Contract\Auth
         return UserRecord::fromResponseData($data['users'][0]);
     }
 
-    public function getUserByPhoneNumber($phoneNumber): UserRecord
+    public function getUserByPhoneNumber(Stringable|string $phoneNumber): UserRecord
     {
         $phoneNumber = (string) $phoneNumber;
 
@@ -227,33 +215,33 @@ final class Auth implements Contract\Auth
         return $this->createUser(CreateUser::new());
     }
 
-    public function changeUserPassword($uid, $newPassword): UserRecord
+    public function changeUserPassword(Stringable|string $uid, Stringable|string $newPassword): UserRecord
     {
         return $this->updateUser($uid, UpdateUser::new()->withClearTextPassword($newPassword));
     }
 
-    public function changeUserEmail($uid, $newEmail): UserRecord
+    public function changeUserEmail(Stringable|string $uid, Stringable|string $newEmail): UserRecord
     {
         return $this->updateUser($uid, UpdateUser::new()->withEmail($newEmail));
     }
 
-    public function enableUser($uid): UserRecord
+    public function enableUser(Stringable|string $uid): UserRecord
     {
         return $this->updateUser($uid, UpdateUser::new()->markAsEnabled());
     }
 
-    public function disableUser($uid): UserRecord
+    public function disableUser(Stringable|string $uid): UserRecord
     {
         return $this->updateUser($uid, UpdateUser::new()->markAsDisabled());
     }
 
-    public function deleteUser($uid): void
+    public function deleteUser(Stringable|string $uid): void
     {
-        $uid = (string) (new Uid((string) $uid));
+        $uid = Uid::fromString($uid)->value;
 
         try {
             $this->client->deleteUser($uid);
-        } catch (UserNotFound $e) {
+        } catch (UserNotFound) {
             throw new UserNotFound("No user with uid '{$uid}' found.");
         }
     }
@@ -270,9 +258,9 @@ final class Auth implements Contract\Auth
         return DeleteUsersResult::fromRequestAndResponse($request, $response);
     }
 
-    public function getEmailActionLink(string $type, $email, $actionCodeSettings = null, ?string $locale = null): string
+    public function getEmailActionLink(string $type, Stringable|string $email, $actionCodeSettings = null, ?string $locale = null): string
     {
-        $email = (string) (new Email((string) $email));
+        $email = Email::fromString((string) $email)->value;
 
         if ($actionCodeSettings === null) {
             $actionCodeSettings = ValidatedActionCodeSettings::empty();
@@ -285,9 +273,9 @@ final class Auth implements Contract\Auth
         return $this->client->getEmailActionLink($type, $email, $actionCodeSettings, $locale);
     }
 
-    public function sendEmailActionLink(string $type, $email, $actionCodeSettings = null, ?string $locale = null): void
+    public function sendEmailActionLink(string $type, Stringable|string $email, $actionCodeSettings = null, ?string $locale = null): void
     {
-        $email = (string) (new Email((string) $email));
+        $email = Email::fromString((string) $email)->value;
 
         if ($actionCodeSettings === null) {
             $actionCodeSettings = ValidatedActionCodeSettings::empty();
@@ -315,78 +303,76 @@ final class Auth implements Contract\Auth
             }
 
             if (!($idToken = $signInResult->idToken())) {
-                // @codeCoverageIgnoreStart
-                // This only happens if the response on Google's side has changed
-                // If it does, the tests will fail, but we don't have to cover that
                 throw new FailedToSendActionLink("Failed to send action link: Unable to retrieve ID token for user assigned to email {$email}");
-                // @codeCoverageIgnoreEnd
             }
         }
 
         $this->client->sendEmailActionLink($type, $email, $actionCodeSettings, $locale, $idToken);
     }
 
-    public function getEmailVerificationLink($email, $actionCodeSettings = null, ?string $locale = null): string
+    public function getEmailVerificationLink(Stringable|string $email, $actionCodeSettings = null, ?string $locale = null): string
     {
         return $this->getEmailActionLink('VERIFY_EMAIL', $email, $actionCodeSettings, $locale);
     }
 
-    public function sendEmailVerificationLink($email, $actionCodeSettings = null, ?string $locale = null): void
+    public function sendEmailVerificationLink(Stringable|string $email, $actionCodeSettings = null, ?string $locale = null): void
     {
         $this->sendEmailActionLink('VERIFY_EMAIL', $email, $actionCodeSettings, $locale);
     }
 
-    public function getPasswordResetLink($email, $actionCodeSettings = null, ?string $locale = null): string
+    public function getPasswordResetLink(Stringable|string $email, $actionCodeSettings = null, ?string $locale = null): string
     {
         return $this->getEmailActionLink('PASSWORD_RESET', $email, $actionCodeSettings, $locale);
     }
 
-    public function sendPasswordResetLink($email, $actionCodeSettings = null, ?string $locale = null): void
+    public function sendPasswordResetLink(Stringable|string $email, $actionCodeSettings = null, ?string $locale = null): void
     {
         $this->sendEmailActionLink('PASSWORD_RESET', $email, $actionCodeSettings, $locale);
     }
 
-    public function getSignInWithEmailLink($email, $actionCodeSettings = null, ?string $locale = null): string
+    public function getSignInWithEmailLink(Stringable|string $email, $actionCodeSettings = null, ?string $locale = null): string
     {
         return $this->getEmailActionLink('EMAIL_SIGNIN', $email, $actionCodeSettings, $locale);
     }
 
-    public function sendSignInWithEmailLink($email, $actionCodeSettings = null, ?string $locale = null): void
+    public function sendSignInWithEmailLink(Stringable|string $email, $actionCodeSettings = null, ?string $locale = null): void
     {
         $this->sendEmailActionLink('EMAIL_SIGNIN', $email, $actionCodeSettings, $locale);
     }
 
-    public function setCustomUserClaims($uid, ?array $claims): void
+    public function setCustomUserClaims(Stringable|string $uid, ?array $claims): void
     {
-        $uid = (string) (new Uid((string) $uid));
+        $uid = Uid::fromString($uid)->value;
         $claims ??= [];
 
         $this->client->setCustomUserClaims($uid, $claims);
     }
 
-    public function createCustomToken($uid, array $claims = [], $ttl = 3600): UnencryptedToken
+    public function createCustomToken(Stringable|string $uid, array $claims = [], $ttl = 3600): UnencryptedToken
     {
-        $uid = (string) (new Uid((string) $uid));
-
-        $generator = $this->tokenGenerator;
-
-        if ($generator instanceof CustomTokenGenerator) {
-            $tokenString = $generator->createCustomToken($uid, $claims, $ttl)->toString();
-        } elseif ($generator instanceof CustomTokenViaGoogleCredentials) {
-            $expiresAt = $this->clock->now()->add(Duration::make($ttl)->value());
-
-            $tokenString = $generator->createCustomToken($uid, $claims, $expiresAt)->toString();
-        } else {
+        if (!$this->tokenGenerator) {
             throw new AuthError('Custom Token Generation is disabled because the current credentials do not permit it');
         }
 
-        return $this->parseToken($tokenString);
+        $uid = Uid::fromString($uid)->value;
+
+        if (!$ttl instanceof DateInterval) {
+            $ttl = new DateInterval(sprintf('PT%sS', $ttl));
+        }
+
+        $expiresAt = $this->clock->now()->add($ttl);
+
+        $token = $this->tokenGenerator->createCustomToken($uid, $claims, $expiresAt);
+
+        assert($token instanceof UnencryptedToken);
+
+        return $token;
     }
 
     public function parseToken(string $tokenString): UnencryptedToken
     {
         try {
-            $parsedToken = Configuration::forUnsecuredSigner()->parser()->parse($tokenString);
+            $parsedToken = $this->jwtParser->parse($tokenString);
             assert($parsedToken instanceof UnencryptedToken);
         } catch (Throwable $e) {
             throw new InvalidArgumentException('The given token could not be parsed: '.$e->getMessage());
@@ -400,6 +386,11 @@ final class Auth implements Contract\Auth
         $verifier = $this->idTokenVerifier;
 
         $idTokenString = is_string($idToken) ? $idToken : $idToken->toString();
+        // The ID Token is annotated as non-empty-string or a valid Token, so it cannot be empty
+        // Static analysis are not always sure about that, so we'll help them here.
+        // The assertion is necessary for lcobucci/jwt 4.* but not needed for 5.*
+        // @phpstan-ignore function.alreadyNarrowedType, notIdentical.alwaysTrue
+        assert($idTokenString !== '');
 
         try {
             if ($leewayInSeconds !== null) {
@@ -472,7 +463,7 @@ final class Auth implements Contract\Auth
 
     public function confirmPasswordReset(string $oobCode, $newPassword, bool $invalidatePreviousSessions = true): string
     {
-        $newPassword = (string) (new ClearTextPassword((string) $newPassword));
+        $newPassword = ClearTextPassword::fromString($newPassword)->value;
 
         $response = $this->client->confirmPasswordReset($oobCode, $newPassword);
 
@@ -485,17 +476,23 @@ final class Auth implements Contract\Auth
         return $email;
     }
 
-    public function revokeRefreshTokens($uid): void
+    public function revokeRefreshTokens(Stringable|string $uid): void
     {
-        $uid = (string) (new Uid((string) $uid));
+        $uid = Uid::fromString($uid)->value;
 
         $this->client->revokeRefreshTokens($uid);
     }
 
     public function unlinkProvider($uid, $provider): UserRecord
     {
-        $uid = (string) (new Uid((string) $uid));
-        $provider = array_map('strval', (array) $provider);
+        $uid = Uid::fromString($uid)->value;
+
+        $provider = array_values(
+            array_filter(
+                array_map('strval', (array) $provider),
+                static fn(string $value): bool => $value !== '',
+            ),
+        );
 
         $response = $this->client->unlinkProvider($uid, $provider);
 
@@ -532,15 +529,15 @@ final class Auth implements Contract\Auth
 
     public function signInWithEmailAndPassword($email, $clearTextPassword): SignInResult
     {
-        $email = (string) (new Email((string) $email));
-        $clearTextPassword = (string) (new ClearTextPassword((string) $clearTextPassword));
+        $email = Email::fromString((string) $email)->value;
+        $clearTextPassword = ClearTextPassword::fromString($clearTextPassword)->value;
 
         return $this->client->handleSignIn(SignInWithEmailAndPassword::fromValues($email, $clearTextPassword));
     }
 
     public function signInWithEmailAndOobCode($email, string $oobCode): SignInResult
     {
-        $email = (string) (new Email((string) $email));
+        $email = Email::fromString((string) $email)->value;
 
         return $this->client->handleSignIn(SignInWithEmailAndOobCode::fromValues($email, $oobCode));
     }

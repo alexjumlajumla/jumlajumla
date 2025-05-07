@@ -121,13 +121,6 @@ class Telescope
     public static $shouldRecord = false;
 
     /**
-     * Indicates if Telescope migrations will be run.
-     *
-     * @var bool
-     */
-    public static $runsMigrations = true;
-
-    /**
      * Register the Telescope watchers and start recording if necessary.
      *
      * @param  \Illuminate\Foundation\Application  $app
@@ -670,9 +663,15 @@ class Telescope
                 $updateResult = $storage->update(static::collectUpdates($batchId)) ?: Collection::make();
 
                 if (! isset($_ENV['VAPOR_SSM_PATH'])) {
+                    $delay = config('telescope.queue.delay');
+
                     $updateResult->whenNotEmpty(fn ($pendingUpdates) => rescue(fn () => ProcessPendingUpdates::dispatch(
                         $pendingUpdates,
-                    )->delay(now()->addSeconds(10))));
+                    )->onConnection(
+                        config('telescope.queue.connection')
+                    )->onQueue(
+                        config('telescope.queue.queue')
+                    )->delay(is_numeric($delay) && $delay > 0 ? now()->addSeconds($delay) : null)));
                 }
 
                 if ($storage instanceof TerminableRepository) {
@@ -818,17 +817,5 @@ class Telescope
             'timezone' => config('app.timezone'),
             'recording' => ! cache('telescope:pause-recording'),
         ];
-    }
-
-    /**
-     * Configure Telescope to not register its migrations.
-     *
-     * @return static
-     */
-    public static function ignoreMigrations()
-    {
-        static::$runsMigrations = false;
-
-        return new static;
     }
 }

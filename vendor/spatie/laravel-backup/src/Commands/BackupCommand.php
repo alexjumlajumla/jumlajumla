@@ -3,21 +3,24 @@
 namespace Spatie\Backup\Commands;
 
 use Exception;
+use Illuminate\Contracts\Console\Isolatable;
 use Spatie\Backup\Events\BackupHasFailed;
+use Spatie\Backup\Exceptions\BackupFailed;
 use Spatie\Backup\Exceptions\InvalidCommand;
 use Spatie\Backup\Tasks\Backup\BackupJobFactory;
+use Spatie\Backup\Traits\Retryable;
 
-class BackupCommand extends BaseCommand
+class BackupCommand extends BaseCommand implements Isolatable
 {
-    /** @var string */
-    protected $signature = 'backup:run {--filename=} {--only-db} {--db-name=*} {--only-files} {--only-to-disk=} {--disable-notifications} {--timeout=}';
+    use Retryable;
 
-    /** @var string */
+    protected $signature = 'backup:run {--filename=} {--only-db} {--db-name=*} {--only-files} {--only-to-disk=} {--disable-notifications} {--timeout=} {--tries=}';
+
     protected $description = 'Run the backup.';
 
-    public function handle()
+    public function handle(): int
     {
-        consoleOutput()->comment('Starting backup...');
+        consoleOutput()->comment($this->currentTry > 1 ? sprintf('Attempt n°%d...', $this->currentTry) : 'Starting backup...');
 
         $disableNotifications = $this->option('disable-notifications');
 
@@ -49,28 +52,58 @@ class BackupCommand extends BaseCommand
                 $backupJob->setFilename($this->option('filename'));
             }
 
+            $this->setTries('backup');
+
             if ($disableNotifications) {
                 $backupJob->disableNotifications();
+            }
+
+            if (! $this->getSubscribedSignals()) {
+                $backupJob->disableSignals();
             }
 
             $backupJob->run();
 
             consoleOutput()->comment('Backup completed!');
-        } catch (Exception $exception) {
-            consoleOutput()->error("Backup failed because: {$exception->getMessage()}.");
 
-            if (! $disableNotifications) {
-                event(new BackupHasFailed($exception));
+            return static::SUCCESS;
+        } catch (Exception $exception) {
+            if ($this->shouldRetry()) {
+                if ($this->hasRetryDelay('backup')) {
+                    $this->sleepFor($this->getRetryDelay('backup'));
+                }
+
+                $this->currentTry += 1;
+
+                return $this->handle();
             }
 
-            return 1;
+            consoleOutput()->error("Backup failed because: {$exception->getMessage()}.");
+
+            report($exception);
+
+            if (! $disableNotifications) {
+                event(
+                    $exception instanceof BackupFailed
+                    ? new BackupHasFailed($exception->getPrevious(), $exception->backupDestination)
+                    : new BackupHasFailed($exception)
+                );
+            }
+
+            return static::FAILURE;
         }
     }
 
     protected function guardAgainstInvalidOptions()
     {
-        if ($this->option('only-db') && $this->option('only-files')) {
-            throw InvalidCommand::create('Cannot use `only-db` and `only-files` together');
+        if (! $this->option('only-db')) {
+            return;
         }
+
+        if (! $this->option('only-files')) {
+            return;
+        }
+
+        throw InvalidCommand::create('Cannot use `only-db` and `only-files` together');
     }
 }

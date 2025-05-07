@@ -41,7 +41,7 @@ class SelcomService extends BaseService
         \Log::info('Selcom data ss', $before);
         $modelId    = data_get($before, 'model_id');      
 
-        $totalPrice = data_get($before, 'total_price');  //ceil(data_get($before, 'total_price')) / 100;
+        $totalPrice = ceil(data_get($before, 'total_price')) / 100;
 
         $trxRef     = "$modelId-" . time();
 

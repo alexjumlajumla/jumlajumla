@@ -16,11 +16,16 @@ use function rawurldecode;
 use function sprintf;
 use function trim;
 
+/**
+ * @internal
+ */
 class Validator
 {
-    public const MAX_DEPTH = 32;
-    public const MAX_KEY_SIZE = 768;
-    public const INVALID_KEY_CHARS = '.$#[]';
+    final public const MAX_DEPTH = 32;
+
+    final public const MAX_KEY_SIZE = 768;
+
+    final public const INVALID_KEY_CHARS = '.$#[]';
 
     /**
      * Checks the reference URI for invalid properties.

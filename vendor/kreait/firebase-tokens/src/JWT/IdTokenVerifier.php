@@ -18,15 +18,18 @@ use Psr\Cache\CacheItemPoolInterface;
 
 final class IdTokenVerifier
 {
-    private Handler $handler;
-
+    /**
+     * @var non-empty-string|null
+     */
     private ?string $expectedTenantId = null;
 
-    public function __construct(Handler $handler)
+    public function __construct(private readonly Handler $handler)
     {
-        $this->handler = $handler;
     }
 
+    /**
+     * @param non-empty-string $projectId
+     */
     public static function createWithProjectId(string $projectId): self
     {
         $clock = SystemClock::create();
@@ -38,6 +41,9 @@ final class IdTokenVerifier
         return new self($handler);
     }
 
+    /**
+     * @param non-empty-string $projectId
+     */
     public static function createWithProjectIdAndCache(string $projectId, CacheItemPoolInterface $cache): self
     {
         $clock = SystemClock::create();
@@ -51,6 +57,9 @@ final class IdTokenVerifier
         return new self($handler);
     }
 
+    /**
+     * @param non-empty-string $tenantId
+     */
     public function withExpectedTenantId(string $tenantId): self
     {
         $verifier = clone $this;
@@ -69,6 +78,8 @@ final class IdTokenVerifier
     }
 
     /**
+     * @param non-empty-string $token
+     *
      * @throws IdTokenVerificationFailed
      */
     public function verifyIdToken(string $token): Token
@@ -77,8 +88,11 @@ final class IdTokenVerifier
     }
 
     /**
-     * @throws InvalidArgumentException on invalid leeway
+     * @param non-empty-string $token
+     * @param int<0, max> $leewayInSeconds
+     *
      * @throws IdTokenVerificationFailed
+     * @throws InvalidArgumentException on invalid leeway
      */
     public function verifyIdTokenWithLeeway(string $token, int $leewayInSeconds): Token
     {

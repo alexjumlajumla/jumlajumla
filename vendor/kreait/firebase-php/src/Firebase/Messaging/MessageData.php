@@ -6,39 +6,31 @@ namespace Kreait\Firebase\Messaging;
 
 use JsonSerializable;
 use Kreait\Firebase\Exception\InvalidArgumentException;
+use Stringable;
 
 use function in_array;
-use function is_object;
-use function is_scalar;
 use function mb_detect_encoding;
 use function mb_detect_order;
 use function mb_strtolower;
-use function method_exists;
 use function str_starts_with;
-use function trim;
 
 final class MessageData implements JsonSerializable
 {
-    /** @var array<non-empty-string, string> */
-    private array $data = [];
-
-    private function __construct()
+    /**
+     * @param array<non-empty-string, string> $data
+     */
+    private function __construct(private readonly array $data)
     {
     }
 
     /**
-     * @param array<array-key, mixed> $data
+     * @param array<non-empty-string, Stringable|string> $data
      */
     public static function fromArray(array $data): self
     {
-        $messageData = new self();
+        $validated = [];
 
         foreach ($data as $key => $value) {
-            if (!self::isStringable($key) || !self::isStringable($value)) {
-                throw new InvalidArgumentException('Message data must be a one-dimensional array of string(able) keys and values.');
-            }
-
-            $key = (string) $key;
             $value = (string) $value;
 
             if (self::isBinary($value)) {
@@ -50,10 +42,10 @@ final class MessageData implements JsonSerializable
 
             $key = self::assertValidKey($key);
 
-            $messageData->data[$key] = $value;
+            $validated[$key] = $value;
         }
 
-        return $messageData;
+        return new self($validated);
     }
 
     /**
@@ -64,20 +56,9 @@ final class MessageData implements JsonSerializable
         return $this->data;
     }
 
-    /**
-     * @return array<non-empty-string, string>
-     */
     public function jsonSerialize(): array
     {
-        return $this->toArray();
-    }
-
-    /**
-     * @param mixed $value
-     */
-    private static function isStringable($value): bool
-    {
-        return null === $value || is_scalar($value) || (is_object($value) && method_exists($value, '__toString'));
+        return $this->data;
     }
 
     private static function isBinary(string $value): bool
@@ -88,16 +69,12 @@ final class MessageData implements JsonSerializable
     /**
      * @see https://firebase.google.com/docs/cloud-messaging/concept-options#data_messages
      *
+     * @param non-empty-string $key
+     *
      * @return non-empty-string
      */
     private static function assertValidKey(string $key): string
     {
-        $key = trim($key);
-
-        if ($key === '') {
-            throw new InvalidArgumentException("'Empty keys are not allowed in FCM data payloads");
-        }
-
         $check = mb_strtolower($key);
 
         // According to the docs, "notification" is reserved, but it's still accepted ¯\_(ツ)_/¯

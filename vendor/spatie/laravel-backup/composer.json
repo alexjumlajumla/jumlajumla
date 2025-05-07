@@ -18,25 +18,34 @@
         }
     ],
     "require": {
-        "php": "^7.3|^8.0",
+        "php": "^8.1",
         "ext-zip": "^1.14.0",
-        "illuminate/console": "^6.0|^7.0|^8.0",
-        "illuminate/contracts": "^6.0|^7.0|^8.0",
-        "illuminate/events": "^6.0|^7.0|^8.0",
-        "illuminate/filesystem": "^6.0|^7.0|^8.0",
-        "illuminate/notifications": "^6.0|^7.0|^8.0",
-        "illuminate/support": "^6.0|^7.0|^8.0",
-        "league/flysystem": "^1.0.49",
-        "spatie/db-dumper": "^2.12",
-        "spatie/temporary-directory": "^1.1",
-        "symfony/finder": "^4.2|^5.0"
+        "illuminate/console": "^10.10.0|^11.0",
+        "illuminate/contracts": "^10.10.0|^11.0",
+        "illuminate/events": "^10.10.0|^11.0",
+        "illuminate/filesystem": "^10.10.0|^11.0",
+        "illuminate/notifications": "^10.10.0|^11.0",
+        "illuminate/support": "^10.10.0|^11.0",
+        "league/flysystem": "^3.0",
+        "spatie/db-dumper": "^3.0",
+        "spatie/laravel-package-tools": "^1.6.2",
+        "spatie/laravel-signal-aware-command": "^1.2|^2.0",
+        "spatie/temporary-directory": "^2.0",
+        "symfony/console": "^6.0|^7.0",
+        "symfony/finder": "^6.0|^7.0"
     },
     "require-dev": {
-        "laravel/slack-notification-channel": "^2.3",
-        "league/flysystem-aws-s3-v3": "^1.0",
-        "mockery/mockery": "^1.4.2",
-        "orchestra/testbench": "4.*|5.*|6.*",
-        "phpunit/phpunit": "^8.4|^9.0"
+        "ext-pcntl": "*",
+        "composer-runtime-api": "^2.0",
+        "larastan/larastan": "^2.7.0",
+        "laravel/slack-notification-channel": "^2.5|^3.0",
+        "league/flysystem-aws-s3-v3": "^2.0|^3.0",
+        "mockery/mockery": "^1.4",
+        "orchestra/testbench": "^8.0|^9.0",
+        "pestphp/pest": "^1.20|^2.0",
+        "phpstan/extension-installer": "^1.1",
+        "phpstan/phpstan-deprecation-rules": "^1.0",
+        "phpstan/phpstan-phpunit": "^1.1"
     },
     "autoload": {
         "psr-4": {
@@ -52,14 +61,19 @@
         }
     },
     "scripts": {
-        "test": "vendor/bin/phpunit",
-        "format": "vendor/bin/php-cs-fixer fix --allow-risky=yes"
+        "test": "vendor/bin/pest",
+        "format": "vendor/bin/php-cs-fixer fix --allow-risky=yes",
+        "analyse": "vendor/bin/phpstan analyse"
     },
     "suggest": {
         "laravel/slack-notification-channel": "Required for sending notifications via Slack"
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "phpstan/extension-installer": true
+        }
     },
     "extra": {
         "laravel": {

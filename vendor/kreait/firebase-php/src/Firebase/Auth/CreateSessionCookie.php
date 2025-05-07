@@ -9,25 +9,25 @@ use Beste\Clock\WrappingClock;
 use DateInterval;
 use Kreait\Firebase\Exception\InvalidArgumentException;
 use Lcobucci\JWT\Token;
-use StellaMaris\Clock\ClockInterface;
+use Psr\Clock\ClockInterface;
 
 use function is_int;
 
+/**
+ * @internal
+ */
 final class CreateSessionCookie
 {
     private const FIVE_MINUTES = 'PT5M';
-    private const TWO_WEEKS = 'P14D';
-    private string $idToken;
-    private ?string $tenantId;
-    private DateInterval $ttl;
-    private ClockInterface $clock;
 
-    private function __construct(string $idToken, ?string $tenantId, DateInterval $ttl, ClockInterface $clock)
-    {
-        $this->idToken = $idToken;
-        $this->tenantId = $tenantId;
-        $this->ttl = $ttl;
-        $this->clock = $clock;
+    private const TWO_WEEKS = 'P14D';
+
+    private function __construct(
+        private readonly string $idToken,
+        private readonly ?string $tenantId,
+        private readonly DateInterval $ttl,
+        private readonly ClockInterface $clock,
+    ) {
     }
 
     /**

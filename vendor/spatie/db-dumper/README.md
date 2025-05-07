@@ -5,10 +5,9 @@
 [![MIT Licensed](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
 [![Total Downloads](https://img.shields.io/packagist/dt/spatie/db-dumper.svg?style=flat-square)](https://packagist.org/packages/spatie/db-dumper)
 
-This repo contains an easy to use class to dump a database using PHP. Currently MySQL, PostgreSQL, SQLite and MongoDB are supported. Behind
-the scenes `mysqldump`, `pg_dump`, `sqlite3` and `mongodump` are used.
+This repo contains an easy to use class to dump a database using PHP. Currently MySQL, PostgreSQL, SQLite and MongoDB are supported. Behind the scenes `mysqldump`, `pg_dump`, `sqlite3` and `mongodump` are used.
 
-Here's are simple examples of how to create a database dump with different drivers:
+Here are simple examples of how to create a database dump with different drivers:
 
 **MySQL**
 
@@ -38,6 +37,8 @@ Spatie\DbDumper\Databases\Sqlite::create()
     ->dumpToFile('dump.sql');
 ```
 
+⚠️ Sqlite version 3.32.0 is required when using the `includeTables` option.
+
 **MongoDB**
 
 ```php
@@ -57,6 +58,7 @@ We invest a lot of resources into creating [best in class open source packages](
 We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
 
 ## Requirements
+
 For dumping MySQL-db's `mysqldump` should be installed.
 
 For dumping PostgreSQL-db's `pg_dump` should be installed.
@@ -65,10 +67,13 @@ For dumping SQLite-db's `sqlite3` should be installed.
 
 For dumping MongoDB-db's `mongodump` should be installed.
 
+For compressing dump files, `gzip` and/or `bzip2` should be installed.
+
 ## Installation
 
 You can install the package via composer:
-``` bash
+
+```bash
 composer require spatie/db-dumper
 ```
 
@@ -116,6 +121,50 @@ Spatie\DbDumper\Databases\MySql::create()
     ->dumpToFile('dump.sql');
 ```
 
+### Handling AUTO_INCREMENT Values in Dumps
+
+When creating a database dump, you might need to control the inclusion of AUTO_INCREMENT values. This can be crucial for avoiding primary key conflicts or for maintaining ID consistency when transferring data across environments.
+
+#### Skipping AUTO_INCREMENT Values
+
+To omit the AUTO_INCREMENT values from the tables in your dump, use the skipAutoIncrement method. This is particularly useful to prevent conflicts when importing the dump into another database where those specific AUTO_INCREMENT values might already exist, or when the exact values are not relevant.
+
+```php
+Spatie\DbDumper\Databases\MySql::create()
+    ->setDbName('dbname')
+    ->setUserName('username')
+    ->setPassword('password')
+    ->skipAutoIncrement()
+    ->dumpToFile('dump.sql');
+```
+
+### Including AUTO_INCREMENT values in the dump
+
+By default, the AUTO_INCREMENT values are included in the dump. However, if you previously used the skipAutoIncrement method and wish to ensure that the AUTO_INCREMENT values are included in a subsequent dump, use the dontSkipAutoIncrement method to explicitly include them.
+
+```php
+Spatie\DbDumper\Databases\MySql::create()
+    ->setDbName('dbname')
+    ->setUserName('username')
+    ->setPassword('password')
+    ->dontSkipAutoIncrement()
+    ->dumpToFile('dump.sql');
+```
+
+### Use a Database URL
+
+In some applications or environments, database credentials are provided as URLs instead of individual components. In this case, you can use the `setDatabaseUrl` method instead of the individual methods.
+
+```php
+Spatie\DbDumper\Databases\MySql::create()
+    ->setDatabaseUrl($databaseUrl)
+    ->dumpToFile('dump.sql');
+```
+
+When providing a URL, the package will automatically parse it and provide the individual components to the applicable dumper.
+
+For example, if you provide the URL `mysql://username:password@hostname:3306/dbname`, the dumper will use the `hostname` host, running on port `3306`, and will connect to `dbname` with `username` and `password`.
+
 ### Dump specific tables
 
 Using an array:
@@ -128,6 +177,7 @@ Spatie\DbDumper\Databases\MySql::create()
     ->includeTables(['table1', 'table2', 'table3'])
     ->dumpToFile('dump.sql');
 ```
+
 Using a string:
 
 ```php
@@ -144,7 +194,7 @@ Spatie\DbDumper\Databases\MySql::create()
 In order to use "_--column-statistics=0_" as option in mysqldump command you can use _doNotUseColumnStatistics()_ method.
 
 If you have installed _mysqldump 8_, it queries by default _column_statics_ table in _information_schema_ database.
-In some old version of MySql (service) like 5.7, this table it not exists. So you could have an exception during the execution of mysqldump. To avoid this, you could use _doNotUseColumnStatistics()_ method.
+In some old version of MySql (service) like 5.7, this table doesn't exist. So you could have an exception during the execution of mysqldump. To avoid this, you could use _doNotUseColumnStatistics()_ method.
 
 ```php
 Spatie\DbDumper\Databases\MySql::create()
@@ -157,7 +207,7 @@ Spatie\DbDumper\Databases\MySql::create()
 
 ### Excluding tables from the dump
 
-Using an array:
+You can exclude tables from the dump by using an array:
 
 ```php
 Spatie\DbDumper\Databases\MySql::create()
@@ -167,7 +217,8 @@ Spatie\DbDumper\Databases\MySql::create()
     ->excludeTables(['table1', 'table2', 'table3'])
     ->dumpToFile('dump.sql');
 ```
-Using a string:
+
+Or by using a string:
 
 ```php
 Spatie\DbDumper\Databases\MySql::create()
@@ -178,7 +229,10 @@ Spatie\DbDumper\Databases\MySql::create()
     ->dumpToFile('dump.sql');
 ```
 
-### Do not write CREATE TABLE statements that create each dumped table.
+### Do not write CREATE TABLE statements that create each dumped table
+
+You can use `doNotCreateTables` to prevent writing create statements.
+
 ```php
 $dumpCommand = MySql::create()
     ->setDbName('dbname')
@@ -188,7 +242,37 @@ $dumpCommand = MySql::create()
     ->getDumpCommand('dump.sql', 'credentials.txt');
 ```
 
+### Do not write row data
+
+You can use `doNotDumpData` to prevent writing row data.
+
+
+```php
+$dumpCommand = MySql::create()
+    ->setDbName('dbname')
+    ->setUserName('username')
+    ->setPassword('password')
+    ->doNotDumpData()
+    ->getDumpCommand('dump.sql', 'credentials.txt');
+```
+
+### Append instead of overwriting a dump file
+
+You can use `useAppendMode` with MySQL to append to the file instead of overwriting it. 
+This is useful for two-step dumps when you want to dump the whole schema but only some of the data 
+(for example: only migrations, or only product but not customer data).
+
+```php
+$dumpCommand = MySql::create()
+    ->setDbName('dbname')
+    ->setUserName('username')
+    ->setPassword('password')
+    ->useAppendMode()
+    ->getDumpCommand('dump.sql', 'credentials.txt');
+```
+
 ### Adding extra options
+
 If you want to add an arbitrary option to the dump command you can use `addExtraOption`
 
 ```php
@@ -224,16 +308,20 @@ $dumpCommand = MySql::create()
 Please note that using the `->addExtraOption('--databases dbname')` or `->addExtraOption('--all-databases')` will override the database name set on a previous `->setDbName()` call.
 
 ### Using compression
-If you want to compress the outputted file, you can use one of the compressors and the resulted dump file will be compressed.
 
-There is one compressor that comes out of the box: `GzipCompressor`. It will compress your db dump with `gzip`. Make sure `gzip` is installed on your system before using this.
+If you want the output file to be compressed, you can use a compressor class.
+
+There are two compressors that come out of the box:
+
+-   `GzipCompressor` - This will compress your db dump with `gzip`. Make sure `gzip` is installed on your system before using this.
+-   `Bzip2Compressor` - This will compress your db dump with `bzip2`. Make sure `bzip2` is installed on your system before using this.
 
 ```php
 $dumpCommand = MySql::create()
     ->setDbName('dbname')
     ->setUserName('username')
     ->setPassword('password')
-    ->useCompressor(new GzipCompressor())
+    ->useCompressor(new GzipCompressor()) // or `new Bzip2Compressor()`
     ->dumpToFile('dump.sql.gz');
 ```
 
@@ -271,28 +359,28 @@ class GzipCompressor implements Compressor
 }
 ```
 
-## Changelog
-
-Please see [CHANGELOG](CHANGELOG.md) for more information what has changed recently.
-
 ## Testing
 
-``` bash
-composer test
+```bash
+$ composer test
 ```
+
+## Changelog
+
+Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
 
 ## Contributing
 
-Please see [CONTRIBUTING](.github/CONTRIBUTING.md) for details.
+Please see [CONTRIBUTING](https://github.com/spatie/.github/blob/main/CONTRIBUTING.md) for details.
 
-## Security
+## Security Vulnerabilities
 
-If you discover any security related issues, please email freek@spatie.be instead of using the issue tracker.
+Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
 
 ## Credits
 
-- [Freek Van der Herten](https://github.com/freekmurze)
-- [All Contributors](../../contributors)
+-   [Freek Van der Herten](https://github.com/freekmurze)
+-   [All Contributors](../../contributors)
 
 Initial PostgreSQL support was contributed by [Adriano Machado](https://github.com/ammachado). SQlite support was contributed by [Peter Matseykanets](https://twitter.com/pmatseykanets).
 

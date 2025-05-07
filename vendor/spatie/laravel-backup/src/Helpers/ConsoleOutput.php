@@ -2,27 +2,30 @@
 
 namespace Spatie\Backup\Helpers;
 
+use Illuminate\Console\Command;
+
+/**
+ * @phpstan-ignore-next-line
+ *
+ * @mixin \Illuminate\Console\Concerns\InteractsWithIO
+ */
 class ConsoleOutput
 {
-    /** @var \Illuminate\Console\OutputStyle */
-    protected $output;
+    protected ?Command $command = null;
 
-    /**
-     * @param \Illuminate\Console\OutputStyle $output
-     */
-    public function setOutput($output)
+    public function setCommand(Command $command): void
     {
-        $this->output = $output;
+        $this->command = $command;
     }
 
     public function __call(string $method, array $arguments)
     {
         $consoleOutput = app(static::class);
 
-        if (! $consoleOutput->output) {
+        if (! $consoleOutput->command) {
             return;
         }
 
-        $consoleOutput->output->$method($arguments[0]);
+        $consoleOutput->command->$method($arguments[0]);
     }
 }

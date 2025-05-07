@@ -1,6 +1,65 @@
 # CHANGELOG
 
-## Unreleased
+## 5.10.0 - 2024-11-22
+
+* Added support for PHP 8.4
+
+## 5.9.1 - 2024-06-23
+
+* Revert making the Service provider deferrable. The auto discovery problem is hopefully still fixed because of
+  the change in the latest version of the SDK.
+
+## 5.9.0 - 2024-06-23
+
+* Service Provider Registration is now deferred. This should fix the credentials auto discovery in Laravel's 
+  package discovery stage
+  ([#210](https://github.com/kreait/laravel-firebase/pull/210))
+
+## 5.8.0 - 2024-03-13
+
+* Added support for Laravel 11 
+  ([#214](https://github.com/kreait/laravel-firebase/pull/214))
+
+## 5.7.0 - 2024-02-19
+
+* Enabled using `symfony/cache:^7`
+
+## 5.6.0 - 2024-01-13
+
+* Added support for overriding the name of the Firestore Default Database
+  ([#209](https://github.com/kreait/laravel-firebase/pull/209))
+
+## 5.5.0 - 2023-11-30
+
+* Added support for PHP 8.3
+
+## 5.4.0 - 2023-10-05
+
+* Added support for configuration of credentials with a config array
+  ([#202](https://github.com/kreait/laravel-firebase/pull/202))
+
+## 5.3.0 - 2023-07-26
+
+* Enabled injecting middlewares into the Firebase API client
+  ([#187](https://github.com/kreait/laravel-firebase/pull/187))
+
+## 5.2.0 - 2023-03-30
+
+* Added AppCheck support
+  ([#174](https://github.com/kreait/laravel-firebase/pull/174))
+
+## 5.1.0 - 2023-02-15
+
+* Added support for Laravel 10
+
+## 5.0.0 - 2023-01-13
+
+* Upgraded `kreait/firebase-php` from 6.x to 7.x
+* Dropped support for PHP <8.1, Laravel <9.0
+* Dropped support for Lumen ([it is not recommended anymore to use it](https://github.com/laravel/lumen/commit/69b26578d2f15595ea901278434b74df459c4329))
+* The ability to disable credentials auto-discovery has been removed. If you don't want a service account to be
+  auto-discovered, provide it by setting the `GOOGLE_APPLICATION_CREDENTIALS` environment variable or by modifying
+  the package configuration. 
 
 ## 4.2.0 - 2022-07-28
 

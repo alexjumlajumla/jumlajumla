@@ -14,14 +14,15 @@ use function sprintf;
 use function str_replace;
 use function uasort;
 
+/**
+ * @internal
+ */
 final class OrderByChild implements Sorter
 {
     use ModifierTrait;
-    private string $childKey;
 
-    public function __construct(string $childKey)
+    public function __construct(private readonly string $childKey)
     {
-        $this->childKey = $childKey;
     }
 
     public function modifyUri(UriInterface $uri): UriInterface
@@ -29,7 +30,7 @@ final class OrderByChild implements Sorter
         return $this->appendQueryParam($uri, 'orderBy', sprintf('"%s"', $this->childKey));
     }
 
-    public function modifyValue($value)
+    public function modifyValue(mixed $value): mixed
     {
         if (!is_array($value)) {
             return $value;
@@ -37,7 +38,7 @@ final class OrderByChild implements Sorter
 
         $expression = str_replace('/', '.', $this->childKey);
 
-        uasort($value, static fn ($a, $b) => search($expression, $a) <=> search($expression, $b));
+        uasort($value, static fn($a, $b): int => search($expression, $a) <=> search($expression, $b));
 
         return $value;
     }

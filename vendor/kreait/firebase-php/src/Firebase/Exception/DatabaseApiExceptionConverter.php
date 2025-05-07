@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kreait\Firebase\Exception;
 
+use Fig\Http\Message\StatusCodeInterface as StatusCode;
 use GuzzleHttp\Exception\RequestException;
 use Kreait\Firebase\Exception\Database\ApiConnectionFailed;
 use Kreait\Firebase\Exception\Database\DatabaseError;
@@ -19,7 +20,7 @@ use Throwable;
  */
 class DatabaseApiExceptionConverter
 {
-    private ErrorResponseParser $responseParser;
+    private readonly ErrorResponseParser $responseParser;
 
     public function __construct()
     {
@@ -50,18 +51,11 @@ class DatabaseApiExceptionConverter
             $code = $response->getStatusCode();
         }
 
-        switch ($code) {
-            case 401:
-            case 403:
-                return new PermissionDenied($message, $code, $e);
-
-            case 412:
-                return new PreconditionFailed($message, $code, $e);
-
-            case 404:
-                return DatabaseNotFound::fromUri($e->getRequest()->getUri());
-        }
-
-        return new DatabaseError($message, $code, $e);
+        return match ($code) {
+            StatusCode::STATUS_UNAUTHORIZED, StatusCode::STATUS_FORBIDDEN => new PermissionDenied($message, $code, $e),
+            StatusCode::STATUS_PRECONDITION_FAILED => new PreconditionFailed($message, $code, $e),
+            StatusCode::STATUS_NOT_FOUND => DatabaseNotFound::fromUri($e->getRequest()->getUri()),
+            default => new DatabaseError($message, $code, $e),
+        };
     }
 }

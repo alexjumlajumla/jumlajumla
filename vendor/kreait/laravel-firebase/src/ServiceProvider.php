@@ -6,18 +6,13 @@ namespace Kreait\Laravel\Firebase;
 
 use Illuminate\Contracts\Container\Container;
 use Kreait\Firebase;
-use Laravel\Lumen\Application as Lumen;
 
 final class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {
     public function boot(): void
     {
         // @codeCoverageIgnoreStart
-        if (!$this->app->runningInConsole()) {
-            return;
-        }
-
-        if ($this->app instanceof Lumen) {
+        if (! $this->app->runningInConsole()) {
             return;
         }
         // @codeCoverageIgnoreEnd
@@ -29,12 +24,6 @@ final class ServiceProvider extends \Illuminate\Support\ServiceProvider
 
     public function register(): void
     {
-        // @codeCoverageIgnoreStart
-        if ($this->app instanceof Lumen) {
-            $this->app->configure('firebase');
-        }
-        // @codeCoverageIgnoreEnd
-
         $this->mergeConfigFrom(__DIR__.'/../config/firebase.php', 'firebase');
 
         $this->registerManager();
@@ -43,6 +32,9 @@ final class ServiceProvider extends \Illuminate\Support\ServiceProvider
 
     private function registerComponents(): void
     {
+        $this->app->singleton(Firebase\Contract\AppCheck::class, static fn (Container $app) => $app->make(FirebaseProjectManager::class)->project()->appCheck());
+        $this->app->alias(Firebase\Contract\AppCheck::class, 'firebase.app_check');
+
         $this->app->singleton(Firebase\Contract\Auth::class, static fn (Container $app) => $app->make(FirebaseProjectManager::class)->project()->auth());
         $this->app->alias(Firebase\Contract\Auth::class, 'firebase.auth');
 

@@ -8,21 +8,18 @@ use Kreait\Firebase\Exception\InvalidArgumentException;
 use Kreait\Firebase\Value\Uid;
 use Stringable;
 
+/**
+ * @internal
+ */
 final class DeleteUsersRequest
 {
     private const MAX_BATCH_SIZE = 1000;
 
-    /** @var string[] */
-    private array $uids;
-    private bool $enabledUsersShouldBeForceDeleted;
-
-    /**
-     * @param string[] $uids
-     */
-    private function __construct(array $uids, bool $enabledUsersShouldBeForceDeleted)
-    {
-        $this->uids = $uids;
-        $this->enabledUsersShouldBeForceDeleted = $enabledUsersShouldBeForceDeleted;
+    private function __construct(
+        /** @var list<string> $uids */
+        private readonly array $uids,
+        private readonly bool $enabledUsersShouldBeForceDeleted,
+    ) {
     }
 
     /**
@@ -34,7 +31,7 @@ final class DeleteUsersRequest
         $count = 0;
 
         foreach ($uids as $uid) {
-            $validatedUids[] = (string) (new Uid((string) $uid));
+            $validatedUids[] = Uid::fromString($uid)->value;
             ++$count;
 
             if ($count > self::MAX_BATCH_SIZE) {

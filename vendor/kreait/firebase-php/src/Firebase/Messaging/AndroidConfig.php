@@ -82,26 +82,32 @@ use function sprintf;
 final class AndroidConfig implements JsonSerializable
 {
     private const MESSAGE_PRIORITY_NORMAL = 'normal';
-    private const MESSAGE_PRIORITY_HIGH = 'high';
-    private const NOTIFICATION_PRIORITY_UNSPECIFIED = 'PRIORITY_UNSPECIFIED';
-    private const NOTIFICATION_PRIORITY_MIN = 'PRIORITY_MIN';
-    private const NOTIFICATION_PRIORITY_LOW = 'PRIORITY_LOW';
-    private const NOTIFICATION_PRIORITY_DEFAULT = 'PRIORITY_DEFAULT';
-    private const NOTIFICATION_PRIORITY_HIGH = 'PRIORITY_HIGH';
-    private const NOTIFICATION_PRIORITY_MAX = 'PRIORITY_MAX';
-    private const NOTIFICATION_VISIBILITY_PRIVATE = 'PRIVATE';
-    private const NOTIFICATION_VISIBILITY_PUBLIC = 'PUBLIC';
-    private const NOTIFICATION_VISIBILITY_SECRET = 'SECRET';
 
-    /** @var AndroidConfigShape */
-    private array $config;
+    private const MESSAGE_PRIORITY_HIGH = 'high';
+
+    private const NOTIFICATION_PRIORITY_UNSPECIFIED = 'PRIORITY_UNSPECIFIED';
+
+    private const NOTIFICATION_PRIORITY_MIN = 'PRIORITY_MIN';
+
+    private const NOTIFICATION_PRIORITY_LOW = 'PRIORITY_LOW';
+
+    private const NOTIFICATION_PRIORITY_DEFAULT = 'PRIORITY_DEFAULT';
+
+    private const NOTIFICATION_PRIORITY_HIGH = 'PRIORITY_HIGH';
+
+    private const NOTIFICATION_PRIORITY_MAX = 'PRIORITY_MAX';
+
+    private const NOTIFICATION_VISIBILITY_PRIVATE = 'PRIVATE';
+
+    private const NOTIFICATION_VISIBILITY_PUBLIC = 'PUBLIC';
+
+    private const NOTIFICATION_VISIBILITY_SECRET = 'SECRET';
 
     /**
      * @param AndroidConfigShape $config
      */
-    private function __construct(array $config)
+    private function __construct(private array $config)
     {
-        $this->config = $config;
     }
 
     public static function new(): self
@@ -144,40 +150,14 @@ final class AndroidConfig implements JsonSerializable
         return $config;
     }
 
-    /**
-     * @deprecated 6.4.0 Use {@see withHighMessagePriority()} instead
-     */
-    public function withHighPriority(): self
-    {
-        return $this->withMessagePriority(self::MESSAGE_PRIORITY_HIGH);
-    }
-
     public function withHighMessagePriority(): self
     {
         return $this->withMessagePriority(self::MESSAGE_PRIORITY_HIGH);
     }
 
-    /**
-     * @deprecated 6.4.0 Use {@see withNormalMessagePriority()} instead
-     */
-    public function withNormalPriority(): self
-    {
-        return $this->withMessagePriority(self::MESSAGE_PRIORITY_NORMAL);
-    }
-
     public function withNormalMessagePriority(): self
     {
         return $this->withMessagePriority(self::MESSAGE_PRIORITY_NORMAL);
-    }
-
-    /**
-     * @deprecated 6.4.0 Use {@see withMessagePriority()} instead
-     *
-     * @param self::MESSAGE_PRIORITY_* $priority
-     */
-    public function withPriority(string $priority): self
-    {
-        return $this->withMessagePriority($priority);
     }
 
     /**
@@ -262,12 +242,9 @@ final class AndroidConfig implements JsonSerializable
         return $config;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     public function jsonSerialize(): array
     {
-        return array_filter($this->config, static fn ($value) => $value !== null && $value !== []);
+        return array_filter($this->config, static fn($value): bool => $value !== null && $value !== []);
     }
 
     /**

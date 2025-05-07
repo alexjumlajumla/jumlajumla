@@ -17,18 +17,15 @@ final class FetchGooglePublicKeys
 
     public const DEFAULT_FALLBACK_CACHE_DURATION = 'PT1H';
 
-    /** @var array<int, string> */
-    private array $urls;
-
-    private Duration $fallbackCacheDuration;
+    /** @var array<int, non-empty-string> */
+    private readonly array $urls;
 
     /**
-     * @param array<array-key, string> $urls
+     * @param array<array-key, non-empty-string> $urls
      */
-    private function __construct(array $urls, Duration $fallbackCacheDuration)
+    private function __construct(array $urls, private Duration $fallbackCacheDuration)
     {
-        $this->urls = \array_values($urls);
-        $this->fallbackCacheDuration = $fallbackCacheDuration;
+        $this->urls = array_values($urls);
     }
 
     public static function fromGoogle(): self
@@ -38,6 +35,8 @@ final class FetchGooglePublicKeys
 
     /**
      * Use this method only if Google has changed the default URL and the library hasn't been updated yet.
+     *
+     * @param non-empty-string $url
      */
     public static function fromUrl(string $url): self
     {
@@ -48,9 +47,9 @@ final class FetchGooglePublicKeys
      * A response from the Google APIs should have a cache control header that determines when the keys expire.
      * If it doesn't have one, fall back to this value.
      *
-     * @param Duration|DateInterval|string|int $duration
+     * @param Duration|DateInterval|non-empty-string|int $duration
      */
-    public function ifKeysDoNotExpireCacheFor($duration): self
+    public function ifKeysDoNotExpireCacheFor(Duration|DateInterval|string|int $duration): self
     {
         $duration = Duration::make($duration);
 

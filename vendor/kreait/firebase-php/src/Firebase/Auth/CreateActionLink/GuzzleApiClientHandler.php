@@ -6,28 +6,31 @@ namespace Kreait\Firebase\Auth\CreateActionLink;
 
 use Beste\Json;
 use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Utils;
 use InvalidArgumentException;
 use Kreait\Firebase\Auth\CreateActionLink;
 use Kreait\Firebase\Auth\ProjectAwareAuthResourceUrlBuilder;
 use Kreait\Firebase\Auth\TenantAwareAuthResourceUrlBuilder;
+use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\RequestInterface;
-
-use const JSON_FORCE_OBJECT;
 
 use function array_filter;
 
-final class GuzzleApiClientHandler implements Handler
-{
-    private ClientInterface $client;
-    private string $projectId;
+use const JSON_FORCE_OBJECT;
 
-    public function __construct(ClientInterface $client, string $projectId)
-    {
-        $this->client = $client;
-        $this->projectId = $projectId;
+/**
+ * @internal
+ */
+final class GuzzleApiClientHandler
+{
+    /**
+     * @param non-empty-string $projectId
+     */
+    public function __construct(
+        private readonly ClientInterface $client,
+        private readonly string $projectId,
+    ) {
     }
 
     public function handle(CreateActionLink $action): string
@@ -36,7 +39,7 @@ final class GuzzleApiClientHandler implements Handler
 
         try {
             $response = $this->client->send($request, ['http_errors' => false]);
-        } catch (GuzzleException $e) {
+        } catch (ClientExceptionInterface $e) {
             throw new FailedToCreateActionLink('Failed to create action link: '.$e->getMessage(), $e->getCode(), $e);
         }
 

@@ -11,8 +11,7 @@ use Spatie\Backup\Tasks\Cleanup\Period;
 
 class DefaultStrategy extends CleanupStrategy
 {
-    /** @var \Spatie\Backup\BackupDestination\Backup */
-    protected $newestBackup;
+    protected ?Backup $newestBackup = null;
 
     public function deleteOldBackups(BackupCollection $backups)
     {
@@ -21,10 +20,10 @@ class DefaultStrategy extends CleanupStrategy
 
         $dateRanges = $this->calculateDateRanges();
 
+        /** @var Collection<(string|BackupCollection)> */
         $backupsPerPeriod = $dateRanges->map(function (Period $period) use ($backups) {
-            return $backups->filter(function (Backup $backup) use ($period) {
-                return $backup->date()->between($period->startDate(), $period->endDate());
-            });
+            return $backups
+                ->filter(fn (Backup $backup) => $backup->date()->between($period->startDate(), $period->endDate()));
         });
 
         $backupsPerPeriod['daily'] = $this->groupByDateFormat($backupsPerPeriod['daily'], 'Ymd');
@@ -73,9 +72,7 @@ class DefaultStrategy extends CleanupStrategy
 
     protected function groupByDateFormat(Collection $backups, string $dateFormat): Collection
     {
-        return $backups->groupBy(function (Backup $backup) use ($dateFormat) {
-            return $backup->date()->format($dateFormat);
-        });
+        return $backups->groupBy(fn (Backup $backup) => $backup->date()->format($dateFormat));
     }
 
     protected function removeBackupsForAllPeriodsExceptOne(Collection $backupsPerPeriod)
@@ -84,34 +81,47 @@ class DefaultStrategy extends CleanupStrategy
             $groupedBackupsByDateProperty->each(function (Collection $group) {
                 $group->shift();
 
-                $group->each->delete();
+                $group->each(fn (Backup $backup) => $backup->delete());
             });
         });
     }
 
     protected function removeBackupsOlderThan(Carbon $endDate, BackupCollection $backups)
     {
-        $backups->filter(function (Backup $backup) use ($endDate) {
-            return $backup->exists() && $backup->date()->lt($endDate);
-        })->each->delete();
+        $backups
+            ->filter(fn (Backup $backup) => $backup->exists() && $backup->date()->lt($endDate))
+            ->each(fn (Backup $backup) => $backup->delete());
     }
 
     protected function removeOldBackupsUntilUsingLessThanMaximumStorage(BackupCollection $backups)
     {
-        if (! $oldest = $backups->oldest()) {
+        if (! $this->shouldRemoveOldestBackup($backups)) {
             return;
         }
 
-        $maximumSize = $this->config->get('backup.cleanup.default_strategy.delete_oldest_backups_when_using_more_megabytes_than')
-            * 1024 * 1024;
+        $backups->oldest()->delete();
 
-        if (($backups->size() + $this->newestBackup->size()) <= $maximumSize) {
-            return;
-        }
-        $oldest->delete();
-
-        $backups = $backups->filter->exists();
+        $backups = $backups->filter(fn (Backup $backup) => $backup->exists());
 
         $this->removeOldBackupsUntilUsingLessThanMaximumStorage($backups);
+    }
+
+    protected function shouldRemoveOldestBackup(BackupCollection $backups): bool
+    {
+        if (! $backups->oldest()) {
+            return false;
+        }
+
+        $maximumSize = $this->config->get('backup.cleanup.default_strategy.delete_oldest_backups_when_using_more_megabytes_than');
+
+        if ($maximumSize === null) {
+            return false;
+        }
+
+        if (($backups->size() + $this->newestBackup->sizeInBytes()) <= $maximumSize * 1024 * 1024) {
+            return false;
+        }
+
+        return true;
     }
 }

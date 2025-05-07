@@ -1,10 +1,10 @@
 <?php
 
 return [
-    'exception_message' => 'Exception message: :message',
-    'exception_trace' => 'Exception trace: :trace',
-    'exception_message_title' => 'Exception message',
-    'exception_trace_title' => 'Exception trace',
+    'exception_message' => 'Mensagem de exceção: :message',
+    'exception_trace' => 'Rastreamento de exceção: :trace',
+    'exception_message_title' => 'Mensagem de exceção',
+    'exception_trace_title' => 'Rastreamento de exceção',
 
     'backup_failed_subject' => 'Falha no backup da aplicação :application_name',
     'backup_failed_body' => 'Importante: Ocorreu um erro ao fazer o backup da aplicação :application_name',
@@ -32,4 +32,14 @@ return [
     'unhealthy_backup_found_old' => 'O último backup realizado em :date é considerado muito antigo.',
     'unhealthy_backup_found_unknown' => 'Desculpe, a exata razão não pode ser encontrada.',
     'unhealthy_backup_found_full' => 'Os backups estão usando muito espaço de armazenamento. A utilização atual é de :disk_usage, o que é maior que o limite permitido de :disk_limit.',
+
+    'no_backups_info' => 'Nenhum backup foi feito ainda',
+    'application_name' => 'Nome da Aplicação',
+    'backup_name' => 'Nome de backup',
+    'disk' => 'Disco',
+    'newest_backup_size' => 'Tamanho do backup mais recente',
+    'number_of_backups' => 'Número de backups',
+    'total_storage_used' => 'Armazenamento total usado',
+    'newest_backup_date' => 'Data do backup mais recente',
+    'oldest_backup_date' => 'Data do backup mais antigo',
 ];

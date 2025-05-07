@@ -1172,4 +1172,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
         Route::any('maksekeskus/payment',  [Payment\MaksekeskusController::class, 'paymentWebHook']);
         Route::any('selcom/payment',       [Payment\SelcomController::class,      'paymentWebHook']);
     });
+
+    Route::post('cash-process',         [Payment\CashController::class,      'processTransaction']);
+    Route::post('cash-status',          [Payment\CashController::class,      'updateStatus']);
 });

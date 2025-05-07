@@ -5,10 +5,9 @@
 # Make sure the Country model is properly set up (already done earlier)
 echo "Checking Country model setup..."
 
-# Add Google Maps API key to the settings table
-echo "Adding Google Maps API key to settings..."
-# This command will check if map_api_key exists in settings table and add/update it if needed
-php -r '
+# Create temporary PHP files for database operations
+cat > fix_map_api_key.php << 'EOF'
+<?php
 try {
     // Connect to the remote database
     $pdo = new PDO("mysql:host=139.84.227.249;dbname=jumla_main", "jumla_main", "Cf255f@s9");
@@ -29,16 +28,10 @@ try {
 } catch (PDOException $e) {
     echo "Database error: " . $e->getMessage();
 }
-'
+EOF
 
-# Clear application cache
-echo "Clearing application cache..."
-php artisan optimize:clear
-php artisan cache:clear
-php artisan config:cache
-
-# Check if phone_code field is properly added to countries table
-php -r '
+cat > check_columns.php << 'EOF'
+<?php
 try {
     // Connect to the remote database
     $pdo = new PDO("mysql:host=139.84.227.249;dbname=jumla_main", "jumla_main", "Cf255f@s9");
@@ -67,7 +60,24 @@ try {
 } catch (PDOException $e) {
     echo "Database error: " . $e->getMessage();
 }
-'
+EOF
+
+# Run the PHP scripts
+echo "Adding Google Maps API key to settings..."
+php fix_map_api_key.php
+
+# Clear application cache
+echo "Clearing application cache..."
+php artisan optimize:clear
+php artisan cache:clear
+php artisan config:cache
+
+# Check if phone_code field is properly added to countries table
+echo "Checking country table columns..."
+php check_columns.php
+
+# Clean up temporary files
+rm -f fix_map_api_key.php check_columns.php
 
 echo "Maps functionality should now be working correctly."
 echo "Note: Make sure the Google Maps API key is properly set in the settings table."

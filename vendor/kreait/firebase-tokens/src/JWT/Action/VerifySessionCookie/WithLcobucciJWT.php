@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kreait\Firebase\JWT\Action\VerifySessionCookie;
 
+use Beste\Clock\FrozenClock;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -11,15 +12,15 @@ use Kreait\Firebase\JWT\Action\VerifySessionCookie;
 use Kreait\Firebase\JWT\Contract\Keys;
 use Kreait\Firebase\JWT\Contract\Token;
 use Kreait\Firebase\JWT\Error\SessionCookieVerificationFailed;
-use Kreait\Firebase\JWT\Token as TokenInstance;
+use Kreait\Firebase\JWT\InsecureToken;
+use Kreait\Firebase\JWT\SecureToken;
+use Kreait\Firebase\JWT\Signer\None;
+use Kreait\Firebase\JWT\Token\Parser;
 use Kreait\Firebase\JWT\Util;
-use Lcobucci\Clock\FrozenClock;
 use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Signer;
 use Lcobucci\JWT\Signer\Key\InMemory;
-use Lcobucci\JWT\Signer\None;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
-use Lcobucci\JWT\Token\Parser;
 use Lcobucci\JWT\UnencryptedToken;
 use Lcobucci\JWT\Validation\Constraint\IssuedBy;
 use Lcobucci\JWT\Validation\Constraint\LooseValidAt;
@@ -28,26 +29,31 @@ use Lcobucci\JWT\Validation\Constraint\SignedWith;
 use Lcobucci\JWT\Validation\ConstraintViolation;
 use Lcobucci\JWT\Validation\RequiredConstraintsViolated;
 use Lcobucci\JWT\Validation\Validator;
-use StellaMaris\Clock\ClockInterface;
+use Psr\Clock\ClockInterface;
 use Throwable;
+
+use function assert;
+use function is_string;
 
 /**
  * @internal
  */
 final class WithLcobucciJWT implements Handler
 {
-    private string $projectId;
-    private Keys $keys;
-    private ClockInterface $clock;
-    private Parser $parser;
-    private Signer $signer;
-    private Validator $validator;
+    private readonly Parser $parser;
 
-    public function __construct(string $projectId, Keys $keys, ClockInterface $clock)
-    {
-        $this->projectId = $projectId;
-        $this->keys = $keys;
-        $this->clock = $clock;
+    private Signer $signer;
+
+    private readonly Validator $validator;
+
+    /**
+     * @param non-empty-string $projectId
+     */
+    public function __construct(
+        private readonly string $projectId,
+        private readonly Keys $keys,
+        private readonly ClockInterface $clock,
+    ) {
         $this->parser = new Parser(new JoseEncoder());
 
         if (Util::authEmulatorHost() !== '') {
@@ -65,13 +71,13 @@ final class WithLcobucciJWT implements Handler
 
         try {
             $token = $this->parser->parse($cookieString);
-            \assert($token instanceof UnencryptedToken);
+            assert($token instanceof UnencryptedToken);
         } catch (Throwable $e) {
             throw SessionCookieVerificationFailed::withSessionCookieAndReasons($cookieString, ['The token is invalid', $e->getMessage()]);
         }
 
         $key = $this->getKey($token);
-        $clock = new FrozenClock($this->clock->now());
+        $clock = FrozenClock::at($this->clock->now());
         $leeway = new DateInterval('PT'.$action->leewayInSeconds().'S');
         $errors = [];
         $constraints = [
@@ -93,9 +99,9 @@ final class WithLcobucciJWT implements Handler
                 $this->assertTenantId($token, $tenantId);
             }
         } catch (RequiredConstraintsViolated $e) {
-            $errors = \array_map(
-                static fn (ConstraintViolation $violation): string => '- '.$violation->getMessage(),
-                $e->violations()
+            $errors = array_map(
+                static fn(ConstraintViolation $violation): string => '- '.$violation->getMessage(),
+                $e->violations(),
             );
         }
 
@@ -113,6 +119,7 @@ final class WithLcobucciJWT implements Handler
         unset($claim);
 
         $headers = $token->headers()->all();
+
         foreach ($headers as &$header) {
             if ($header instanceof DateTimeInterface) {
                 $header = $header->getTimestamp();
@@ -120,7 +127,11 @@ final class WithLcobucciJWT implements Handler
         }
         unset($header);
 
-        return TokenInstance::withValues($cookieString, $headers, $claims);
+        if (Util::authEmulatorHost() !== '') {
+            return InsecureToken::withValues($cookieString, $headers, $claims);
+        }
+
+        return SecureToken::withValues($cookieString, $headers, $claims);
     }
 
     private function getKey(UnencryptedToken $token): string
@@ -139,7 +150,11 @@ final class WithLcobucciJWT implements Handler
             return '';
         }
 
-        throw SessionCookieVerificationFailed::withSessionCookieAndReasons($token->toString(), ["No public key matching the key ID '{$keyId}' was found to verify the signature of this session cookie."]);
+        if (is_string($keyId)) {
+            throw SessionCookieVerificationFailed::withSessionCookieAndReasons($token->toString(), ["No public key matching the key ID `{$keyId}` was found to verify the signature of this session cookie."]);
+        }
+
+        throw SessionCookieVerificationFailed::withSessionCookieAndReasons($token->toString(), ["The session cookie doesn't include a `kid` header."]);
     }
 
     private function assertUserAuthedAt(UnencryptedToken $token, DateTimeInterface $now): void
@@ -149,17 +164,17 @@ final class WithLcobucciJWT implements Handler
 
         if (!$authTime) {
             throw RequiredConstraintsViolated::fromViolations(
-                new ConstraintViolation('The token is missing the "auth_time" claim.')
+                new ConstraintViolation('The token is missing the "auth_time" claim.'),
             );
         }
 
-        if (\is_numeric($authTime)) {
+        if (is_numeric($authTime)) {
             $authTime = new DateTimeImmutable('@'.((int) $authTime));
         }
 
         if ($now < $authTime) {
             throw RequiredConstraintsViolated::fromViolations(
-                new ConstraintViolation("The token's user must have authenticated in the past")
+                new ConstraintViolation("The token's user must have authenticated in the past"),
             );
         }
     }
@@ -170,15 +185,15 @@ final class WithLcobucciJWT implements Handler
 
         $tenant = $claim['tenant'] ?? null;
 
-        if (!\is_string($tenant)) {
+        if (!is_string($tenant)) {
             throw RequiredConstraintsViolated::fromViolations(
-                new ConstraintViolation('The ID token does not contain a tenant identifier')
+                new ConstraintViolation('The ID token does not contain a tenant identifier'),
             );
         }
 
         if ($tenant !== $tenantId) {
             throw RequiredConstraintsViolated::fromViolations(
-                new ConstraintViolation("The token's tenant ID did not match with the expected tenant ID")
+                new ConstraintViolation("The token's tenant ID did not match with the expected tenant ID"),
             );
         }
     }

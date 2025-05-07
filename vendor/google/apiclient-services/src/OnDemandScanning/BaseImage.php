@@ -20,18 +20,32 @@ namespace Google\Service\OnDemandScanning;
 class BaseImage extends \Google\Model
 {
   /**
+   * @var int
+   */
+  public $layerCount;
+  /**
    * @var string
    */
   public $name;
   /**
    * @var string
    */
-  public $numLayers;
-  /**
-   * @var string
-   */
   public $repository;
 
+  /**
+   * @param int
+   */
+  public function setLayerCount($layerCount)
+  {
+    $this->layerCount = $layerCount;
+  }
+  /**
+   * @return int
+   */
+  public function getLayerCount()
+  {
+    return $this->layerCount;
+  }
   /**
    * @param string
    */
@@ -45,20 +59,6 @@ class BaseImage extends \Google\Model
   public function getName()
   {
     return $this->name;
-  }
-  /**
-   * @param string
-   */
-  public function setNumLayers($numLayers)
-  {
-    $this->numLayers = $numLayers;
-  }
-  /**
-   * @return string
-   */
-  public function getNumLayers()
-  {
-    return $this->numLayers;
   }
   /**
    * @param string

@@ -20,17 +20,26 @@ final class UpdateUser implements Request
 {
     /** @phpstan-use EditUserTrait<self> */
     use EditUserTrait;
+
     public const DISPLAY_NAME = 'DISPLAY_NAME';
+
     public const PHOTO_URL = 'PHOTO_URL';
+
     public const EMAIL = 'EMAIL';
 
-    /** @var array<string> */
+    /**
+     * @var array<string>
+     */
     private array $attributesToDelete = [];
 
-    /** @var string[] */
+    /**
+     * @var string[]
+     */
     private array $providersToDelete = [];
 
-    /** @var array<string, mixed>|null */
+    /**
+     * @var array<string, mixed>|null
+     */
     private ?array $customAttributes = null;
 
     private function __construct()
@@ -76,7 +85,11 @@ final class UpdateUser implements Request
                 case 'deleteattribute':
                 case 'deleteattributes':
                     foreach ((array) $value as $deleteAttribute) {
-                        if (!is_string($deleteAttribute) || $deleteAttribute === '') {
+                        if (!is_string($deleteAttribute)) {
+                            continue;
+                        }
+
+                        if ($deleteAttribute === '') {
                             continue;
                         }
 
@@ -135,9 +148,21 @@ final class UpdateUser implements Request
                 case 'removeproviders':
                     $request = array_reduce(
                         (array) $value,
-                        static fn (self $request, $provider) => $request->withRemovedProvider($provider),
+                        static fn(self $request, $provider): \Kreait\Firebase\Request\UpdateUser => $request->withRemovedProvider($provider),
                         $request,
                     );
+
+                    break;
+
+                case 'resetmultifactor':
+                    if ($value === true) {
+                        $request = $request->resetMultiFactor();
+                    }
+
+                    break;
+
+                case 'multifactors':
+                    $request = $request->withMultiFactors($value);
 
                     break;
             }
@@ -193,6 +218,32 @@ final class UpdateUser implements Request
     }
 
     /**
+     * @param array<array-key, array{
+     *     'mfaEnrollmentId'?: string,
+     *     'displayName': string,
+     *     'phoneInfo': string,
+     *     'enrolledAt'?: string,
+     * }> $enrollments
+     */
+    public function withMultiFactors(array $enrollments): self
+    {
+        $request = clone $this;
+        $request->multiFactor ??= [];
+        $request->multiFactor['enrollments'] = $enrollments;
+
+        return $request;
+    }
+
+    public function resetMultiFactor(): self
+    {
+        $request = clone $this;
+        $request->multiFactor ??= [];
+        $request->multiFactor['enrollments'] = [];
+
+        return $request;
+    }
+
+    /**
      * @param array<string, mixed> $customAttributes
      */
     public function withCustomAttributes(array $customAttributes): self
@@ -203,9 +254,6 @@ final class UpdateUser implements Request
         return $request;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     public function jsonSerialize(): array
     {
         if (!$this->hasUid()) {

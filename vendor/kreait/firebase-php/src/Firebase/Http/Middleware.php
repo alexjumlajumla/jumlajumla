@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Kreait\Firebase\Http;
 
 use Beste\Json;
+use Closure;
 use Exception;
+use Fig\Http\Message\StatusCodeInterface as StatusCode;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\MessageFormatter;
 use GuzzleHttp\Promise\Create;
+use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Query;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -16,8 +19,6 @@ use Psr\Log\LoggerInterface;
 
 use function array_merge;
 use function ltrim;
-use function mb_stristr;
-use function preg_match_all;
 use function str_ends_with;
 
 /**
@@ -30,7 +31,7 @@ final class Middleware
      */
     public static function ensureJsonSuffix(): callable
     {
-        return static fn (callable $handler) => static function (RequestInterface $request, ?array $options = null) use ($handler) {
+        return static fn(callable $handler): Closure => static function (RequestInterface $request, ?array $options = null) use ($handler) {
             $uri = $request->getUri();
             $path = '/'.ltrim($uri->getPath(), '/');
 
@@ -48,7 +49,7 @@ final class Middleware
      */
     public static function addDatabaseAuthVariableOverride(?array $override): callable
     {
-        return static fn (callable $handler) => static function (RequestInterface $request, ?array $options = null) use ($handler, $override) {
+        return static fn(callable $handler): Closure => static function (RequestInterface $request, ?array $options = null) use ($handler, $override) {
             $uri = $request->getUri();
 
             $uri = $uri->withQuery(Query::build(
@@ -59,36 +60,18 @@ final class Middleware
         };
     }
 
-    /**
-     * Parses multi-requests and multi-responses.
-     */
-    public static function responseWithSubResponses(): callable
-    {
-        return static fn (callable $handler) => static fn (RequestInterface $request, ?array $options = null) => $handler($request, $options ?: [])
-            ->then(static function (ResponseInterface $response) {
-                $isMultiPart = mb_stristr($response->getHeaderLine('Content-Type'), 'multipart') !== false;
-                $hasMultipleStartLines = ((int) preg_match_all('@http/[\S]+\s@i', (string) $response->getBody())) >= 1;
-
-                if ($isMultiPart && $hasMultipleStartLines) {
-                    return new ResponseWithSubResponses($response);
-                }
-
-                return $response;
-            });
-    }
-
     public static function log(LoggerInterface $logger, MessageFormatter $formatter, string $logLevel, string $errorLogLevel): callable
     {
-        return static fn (callable $handler) => static fn ($request, array $options) => $handler($request, $options)->then(
-            static function (ResponseInterface $response) use ($logger, $request, $formatter, $logLevel, $errorLogLevel) {
+        return static fn(callable $handler): Closure => static fn($request, array $options) => $handler($request, $options)->then(
+            static function (ResponseInterface $response) use ($logger, $request, $formatter, $logLevel, $errorLogLevel): ResponseInterface {
                 $message = $formatter->format($request, $response);
-                $messageLogLevel = $response->getStatusCode() >= 400 ? $errorLogLevel : $logLevel;
+                $messageLogLevel = $response->getStatusCode() >= StatusCode::STATUS_BAD_REQUEST ? $errorLogLevel : $logLevel;
 
                 $logger->log($messageLogLevel, $message);
 
                 return $response;
             },
-            static function (Exception $reason) use ($logger, $request, $formatter, $errorLogLevel) {
+            static function (Exception $reason) use ($logger, $request, $formatter, $errorLogLevel): PromiseInterface {
                 $response = $reason instanceof RequestException ? $reason->getResponse() : null;
                 $message = $formatter->format($request, $response, $reason);
 

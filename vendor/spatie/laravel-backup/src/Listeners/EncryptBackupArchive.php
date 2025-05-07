@@ -9,7 +9,7 @@ class EncryptBackupArchive
 {
     public function handle(BackupZipWasCreated $event): void
     {
-        if (! $this->shouldEncrypt()) {
+        if (! self::shouldEncrypt()) {
             return;
         }
 
@@ -40,11 +40,7 @@ class EncryptBackupArchive
             return false;
         }
 
-        if ($algorithm === null) {
-            return false;
-        }
-
-        if ($algorithm === false) {
+        if (! is_int($algorithm)) {
             return false;
         }
 

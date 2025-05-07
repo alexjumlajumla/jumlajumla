@@ -13,6 +13,15 @@ Achieve more with the [Firebase Admin SDK](https://github.com/kreait/firebase-ph
 [![Tests](https://github.com/kreait/firebase-tokens-php/workflows/Tests/badge.svg)](https://github.com/kreait/firebase-tokens-php/actions)
 [![Sponsor](https://img.shields.io/static/v1?logo=GitHub&label=Sponsor&message=%E2%9D%A4&color=ff69b4)](https://github.com/sponsors/jeromegamez)
 
+---
+
+## The future of the Firebase Admin PHP SDK
+
+Please read about the future of the Firebase Admin PHP SDK on the
+[SDK's GitHub Repository](https://github.com/kreait/firebase-php).
+
+---
+
 - [Installation](#installation)
 - [Simple Usage](#simple-usage)
   - [Create a custom token](#create-a-custom-token)
@@ -22,6 +31,7 @@ Achieve more with the [Firebase Admin SDK](https://github.com/kreait/firebase-ph
   - [Tenant Awareness](#tenant-awareness) 
 - [Advanced Usage](#advanced-usage)
   - [Cache results from the Google Secure Token Store](#cache-results-from-the-google-secure-token-store)
+- [Supported Versions](#supported-versions)
 
 ## Installation
 
@@ -123,7 +133,7 @@ try {
 
 ### Tokens
 
-Tokens returned from the Generator and Verifier are instances of `Kreait\Firebase\JWT\Token` and
+Tokens returned from the Generator and Verifier are instances of `\Kreait\Firebase\JWT\Contract\Token` and
 represent a [JWT](https://jwt.io/). The displayed outputs are examples and vary depending on
 the information associated with the given user in your project's auth database.
 
@@ -226,6 +236,21 @@ $cache = new FilesystemAdapter();
 
 $verifier = IdTokenVerifier::createWithProjectIdAndCache($projectId, $cache);
 ```
+
+## Supported Versions
+
+**Only the latest version is actively supported.**
+
+Earlier versions will receive security fixes as long as their **lowest** PHP requirement receives security fixes. For
+example, when a version supports PHP 7.4 and PHP 8.0, security support will end when security support for PHP 7.4 ends.
+
+| Version | Initial Release | Supported PHP Versions   | Status           |
+|---------|-----------------|--------------------------|------------------|
+| `5.x`   | 25 Nov 2023     | `~8.1.0, ~8.2.0, ~8.3.0` | Active           |
+| `4.x`   | 26 Nov 2022     | `~8.1.0, ~8.2.0, ~8.3.0` | Security Support |
+| `3.x`   | 25 Apr 2022     | `^7.4, ^8.0`             | End of life      |
+| `2.x`   | 03 Jan 2022     | `^7.4, ^8.0`             | End of life      |
+| `1.x`   | 06 Feb 2017     | `>=5.5`                  | End of life      |
 
 ## License
 

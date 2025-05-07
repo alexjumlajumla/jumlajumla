@@ -10,7 +10,7 @@ class Format
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
 
-        if ($sizeInBytes === 0) {
+        if ($sizeInBytes === 0.0) {
             return '0 '.$units[1];
         }
         for ($i = 0; $sizeInBytes > 1024; $i++) {
@@ -22,11 +22,9 @@ class Format
 
     public static function emoji(bool $bool): string
     {
-        if ($bool) {
-            return '✅';
-        }
-
-        return '❌';
+        return $bool
+            ? '✅'
+            : '❌';
     }
 
     public static function ageInDays(Carbon $date): string
