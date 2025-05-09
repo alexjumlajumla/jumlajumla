@@ -242,6 +242,11 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
             ->where('id', '[0-9]+');
         Route::get('users/{id}/reviews-group-rating', [Rest\ReviewController::class, 'reviewsGroupByRating'])
             ->where('id', '[0-9]+');
+
+        /* Google Maps */
+        Route::get('google-maps/settings', [Rest\GoogleMapsController::class, 'settings']);
+        Route::get('google-maps/delivery-man/{userId}/location', [Rest\GoogleMapsController::class, 'deliveryManLocation'])
+            ->where('userId', '[0-9]+');
     });
 
     Route::group(['prefix' => 'payments', 'middleware' => ['sanctum.check'], 'as' => 'payment.'], function () {

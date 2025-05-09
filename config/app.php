@@ -220,6 +220,7 @@ return [
         App\Providers\RouteServiceProvider::class,
 //        App\Providers\TelescopeServiceProvider::class,
         App\Providers\RepositoryProvider::class,
+        App\Providers\GoogleMapsServiceProvider::class,
 
     ],
 
